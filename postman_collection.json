@@ -1,0 +1,614 @@
+{
+    "info": {
+        "_postman_id": "b2b-api-collection",
+        "name": "JivanPlatics B2B API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": "API collection for JivanPlatics B2B functionality"
+    },
+    "item": [
+        {
+            "name": "B2B Authentication",
+            "item": [
+                {
+                    "name": "B2B Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"dealer@gmail.com\",\n    \"password\": \"12345678\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/login",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "login"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "B2B Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/logout",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "logout"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Refresh Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/refresh",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "refresh"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/user",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "user"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Dashboard",
+            "item": [
+                {
+                    "name": "Get Dashboard Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/dashboard",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "dashboard"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Products",
+            "item": [
+                {
+                    "name": "Get Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/products",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "products"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Orders",
+            "item": [
+                {
+                    "name": "Get Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/orders",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "orders"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Single Order",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/orders/{{order_id}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "orders", "{{order_id}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Profile",
+            "item": [
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/profile",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "profile"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Dealer Name\",\n    \"phone\": \"9876543210\",\n    \"company_name\": \"Updated Company\",\n    \"gst_number\": \"GST1234567890\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/profile",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "profile"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Return Requests",
+            "item": [
+                {
+                    "name": "Show Return Request Form",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/orders/{{order_id}}/items/{{order_item_id}}/return-request",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "orders", "{{order_id}}", "items", "{{order_item_id}}", "return-request"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Submit Return Request",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Product damaged\",\n    \"quantity\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/orders/{{order_id}}/items/{{order_item_id}}/return-request",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "orders", "{{order_id}}", "items", "{{order_item_id}}", "return-request"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Show Return Requests for Order",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/orders/{{order_id}}/return-requests",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "orders", "{{order_id}}", "return-requests"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Rewards",
+            "item": [
+                {
+                    "name": "Get Available Rewards",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/rewards",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "rewards"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Show Claim Form",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/rewards/{{reward_id}}/claim",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "rewards", "{{reward_id}}", "claim"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Submit Reward Claim",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/rewards/{{reward_id}}/claim",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "rewards", "{{reward_id}}", "claim"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get My Claims",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/reward-claims",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "reward-claims"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Cart",
+            "item": [
+                {
+                    "name": "Get Cart",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/cart",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "cart"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Add to Cart",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": 1,\n    \"quantity\": 2\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/cart/add",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "cart", "add"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Cart",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": 1,\n    \"quantity\": 5\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/cart/update",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "cart", "update"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Remove from Cart",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/cart/remove",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "cart", "remove"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Clear Cart",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/cart/clear",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "cart", "clear"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Cart Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/cart/count",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "cart", "count"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "B2B Checkout",
+            "item": [
+                {
+                    "name": "Checkout Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/checkout",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "checkout"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Place Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{b2b_token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"delivery_address\": \"123 Main Street\",\n    \"delivery_city\": \"City Name\",\n    \"delivery_state\": \"State Name\",\n    \"delivery_pincode\": \"123456\",\n    \"delivery_phone\": \"9876543210\",\n    \"payment_method\": \"cod\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/b2b/checkout",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "b2b", "checkout"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://127.0.0.1:8000"
+        },
+        {
+            "key": "b2b_token",
+            "value": "",
+            "description": "B2B API token obtained after login"
+        },
+        {
+            "key": "order_id",
+            "value": "1",
+            "description": "Sample order ID for testing"
+        },
+        {
+            "key": "order_item_id",
+            "value": "1",
+            "description": "Sample order item ID for testing"
+        },
+        {
+            "key": "reward_id",
+            "value": "1",
+            "description": "Sample reward ID for testing"
+        }
+    ]
+}
