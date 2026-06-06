@@ -66,5 +66,6 @@
     <form id="logout-form" action="{{ route('admin.logout') }}" method="POST" class="hidden">@csrf</form>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('scripts')
+    @include('partials.firebase-notifications', ['role' => 'admin'])
 </body>
 </html>

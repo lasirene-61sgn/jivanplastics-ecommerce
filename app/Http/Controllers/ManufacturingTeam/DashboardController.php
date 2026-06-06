@@ -98,6 +98,20 @@ class DashboardController extends Controller
         
         $order->update($updateData);
         
+        // Notify admin if completed
+        if (isset($updateData['manufacturing_status']) && $updateData['manufacturing_status'] === 'completed') {
+            try {
+                app(\App\Services\FirebaseNotificationService::class)->sendNotification(
+                    'admin',
+                    'Manufacturing Complete',
+                    "Manufacturing for Order #{$order->order_number} is fully complete.",
+                    ['icon' => 'success', 'order_id' => $order->id]
+                );
+            } catch (\Exception $e) {
+                \Log::error("Admin Completion Notification Error: " . $e->getMessage());
+            }
+        }
+        
         return redirect()->back()->with('success', 'Order status updated successfully.');
     }
     
@@ -180,6 +194,18 @@ class DashboardController extends Controller
                 'manufacturing_status' => 'completed',
                 'completed_at' => now(),
             ]);
+            
+            // Notify admin
+            try {
+                app(\App\Services\FirebaseNotificationService::class)->sendNotification(
+                    'admin',
+                    'Manufacturing Complete',
+                    "Manufacturing for Order #{$order->order_number} is fully complete.",
+                    ['icon' => 'success', 'order_id' => $order->id]
+                );
+            } catch (\Exception $e) {
+                \Log::error("Admin Completion Notification Error: " . $e->getMessage());
+            }
             
             return redirect()->back()->with('success', 'All pieces processed. Order marked as Manufacturing Completed.');
         } elseif ($totalCompletedPieces > 0 || $totalRejectedPieces > 0) {
@@ -268,6 +294,20 @@ class DashboardController extends Controller
             }
             
             $order->update($updateData);
+            
+            // Notify admin if completed
+            if (isset($updateData['manufacturing_status']) && $updateData['manufacturing_status'] === 'completed') {
+                try {
+                    app(\App\Services\FirebaseNotificationService::class)->sendNotification(
+                        'admin',
+                        'Manufacturing Complete',
+                        "Manufacturing for Order #{$order->order_number} is fully complete.",
+                        ['icon' => 'success', 'order_id' => $order->id]
+                    );
+                } catch (\Exception $e) {
+                    \Log::error("Admin Completion Notification Error: " . $e->getMessage());
+                }
+            }
         }
         
         return redirect()->back()->with('success', 'Orders status updated successfully.');

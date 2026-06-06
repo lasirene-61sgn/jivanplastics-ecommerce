@@ -296,6 +296,19 @@ class CheckoutController extends Controller
         }
         // --- END OF NEW NOTIFICATION LOGIC ---
 
+        // --- START OF FIREBASE NOTIFICATION LOGIC ---
+        try {
+            app(\App\Services\FirebaseNotificationService::class)->sendNotification(
+                'admin', // Topic name
+                'New Order Placed!',
+                "A new order (#{$order->order_number}) has been placed.",
+                ['icon' => 'success', 'order_id' => $order->id]
+            );
+        } catch (\Exception $e) {
+            \Log::error("Firebase Notification Error: " . $e->getMessage());
+        }
+        // --- END OF FIREBASE NOTIFICATION LOGIC ---
+
         // Clear the cart
         session()->forget('cart');
         
@@ -312,6 +325,11 @@ class CheckoutController extends Controller
         $apiUrl = env('WHATSAPP_API_URL');
         $apiKey = env('WHATSAPP_API_KEY');
         $templateName = env('WHATSAPP_TEMPLATE_NAME');
+
+        if (empty($apiUrl) || empty($apiKey)) {
+            \Log::warning("WhatsApp API credentials are not set in .env. Skipping WhatsApp notification.");
+            return false;
+        }
 
         // 2. Make the API Call
         return Http::withHeaders([

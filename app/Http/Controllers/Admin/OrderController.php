@@ -97,6 +97,29 @@ class OrderController extends Controller
                 'manufacturing_status' => 'allocated',
                 'allocated_at' => now(),
             ]);
+
+            try {
+                // Send push notification to the specific manufacturing team
+                $firebaseService = app(\App\Services\FirebaseNotificationService::class);
+                $topic = 'manufacturing_' . $request->manufacturing_team_id;
+                
+                $firebaseService->sendNotification(
+                    $topic,
+                    'New Order Allocated',
+                    "Order #{$order->order_number} has been allocated to your team.",
+                    ['icon' => 'info', 'order_id' => $order->id]
+                );
+                
+                // Also send to general manufacturing topic for fallback
+                $firebaseService->sendNotification(
+                    'manufacturing',
+                    'New Order Allocated',
+                    "Order #{$order->order_number} has been allocated.",
+                    ['icon' => 'info', 'order_id' => $order->id, 'team_id' => $request->manufacturing_team_id]
+                );
+            } catch (\Exception $e) {
+                \Log::error("Failed to send allocation push notification: " . $e->getMessage());
+            }
         }
 
         return redirect()->back()->with('success', 'Orders allocated to manufacturing team successfully.');

@@ -238,3 +238,15 @@ Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function
         Route::post('/orders/bulk-update', [DashboardController::class, 'bulkUpdateStatus'])->name('orders.bulk-update');
     });
 });
+
+// TEST ROUTE FOR FIREBASE NOTIFICATIONS
+Route::get('/test-firebase', function (\App\Services\FirebaseNotificationService $firebase) {
+    // Fake a notification to the 'admin' topic
+    $firebase->sendNotification(
+        'admin',
+        'Test Notification',
+        'This is a test notification from your Laravel backend!',
+        ['icon' => 'success']
+    );
+    return 'Notification sent to admin topic! Check your dashboard.';
+});
