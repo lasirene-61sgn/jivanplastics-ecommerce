@@ -442,4 +442,26 @@ class OrderController extends Controller
         
         return $invoice;
     }
+
+    /**
+     * Grant manufacturing team permission to correct pieces for an order.
+     * Admin can grant this a maximum of 2 times per order.
+     */
+    public function grantEditPermission(Order $order)
+    {
+        if ($order->mfg_edit_permission_count >= 2) {
+            return redirect()->back()->with('error', 'Edit permission has already been granted 2 times for this order. No more grants allowed.');
+        }
+
+        if ($order->mfg_edit_permission_granted) {
+            return redirect()->back()->with('info', 'Edit permission is already active. Waiting for manufacturing team to submit their correction.');
+        }
+
+        $order->update([
+            'mfg_edit_permission_granted' => true,
+            'mfg_edit_permission_count'   => $order->mfg_edit_permission_count + 1,
+        ]);
+
+        return redirect()->back()->with('success', 'Edit permission granted to manufacturing team. (' . $order->mfg_edit_permission_count . '/2 used)');
+    }
 }

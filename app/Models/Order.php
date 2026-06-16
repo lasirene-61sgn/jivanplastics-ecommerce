@@ -24,6 +24,7 @@ class Order extends Model
         'allocated_at',
         'completed_at',
         'dispatched_at',
+        'tentative_dispatch_date',
         'payment_method',
         'billing_address',
         'billing_city',
@@ -37,8 +38,13 @@ class Order extends Model
         'shipping_country',
         'original_subtotal',
         'discount_amount',
+        'b2b_discount_amount',
         'bank_transfer_discount_amount',
         'other_charges',
+        'mfg_edit_request_note',
+        'mfg_edit_request_at',
+        'mfg_edit_permission_granted',
+        'mfg_edit_permission_count',
     ];
 
     protected $casts = [
@@ -49,10 +55,15 @@ class Order extends Model
         'allocated_at' => 'datetime',
         'completed_at' => 'datetime',
         'dispatched_at' => 'datetime',
+        'tentative_dispatch_date' => 'date',
         'original_subtotal' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'b2b_discount_amount' => 'decimal:2',
         'bank_transfer_discount_amount' => 'decimal:2',
         'other_charges' => 'decimal:2',
+        'mfg_edit_request_at' => 'datetime',
+        'mfg_edit_permission_granted' => 'boolean',
+        'mfg_edit_permission_count' => 'integer',
     ];
 
     protected static function boot()

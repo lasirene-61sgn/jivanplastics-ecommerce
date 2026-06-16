@@ -31,6 +31,14 @@
              fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $link['icon'] }}"></path>
         </svg>
-        <span class="truncate">{{ $link['label'] }}</span>
+        <span class="truncate flex-1">{{ $link['label'] }}</span>
+
+        @if($link['route'] === 'admin.orders.index' && !empty($newOrdersCount) && $newOrdersCount > 0)
+            <span class="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full
+                {{ request()->routeIs($link['route'] . '*') ? 'bg-white text-indigo-600' : 'bg-red-500 text-white' }}
+                animate-pulse">
+                {{ $newOrdersCount > 99 ? '99+' : $newOrdersCount }}
+            </span>
+        @endif
     </a>
 @endforeach

@@ -54,16 +54,48 @@ class CheckoutController extends Controller
             // Get product to calculate GST
             $productId = $item['product_id'] ?? $cartKey;
             $product = Product::find($productId);
-            if ($product && $product->gst_percentage > 0) {
-                $gstAmount = $itemTotal * $product->gst_percentage / 100;
-                $totalGst += $gstAmount;
+            
+            $variation = null;
+            if ($product) {
+                $variation = $product->variations()
+                    ->where(function($q) use ($item) {
+                        $val = $item['size'] ?? null;
+                        if (empty($val)) $q->whereNull('size')->orWhere('size', '');
+                        else $q->where('size', $val);
+                    })
+                    ->where(function($q) use ($item) {
+                        $val = $item['thickness'] ?? null;
+                        if (empty($val)) $q->whereNull('thickness')->orWhere('thickness', '');
+                        else $q->where('thickness', $val);
+                    })
+                    ->where(function($q) use ($item) {
+                        $val = $item['color'] ?? null;
+                        if (empty($val)) $q->whereNull('color')->orWhere('color', '');
+                        else $q->where('color', $val);
+                    })
+                    ->first();
+            }
+            
+            if ($product) {
+                $gstPct = $variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0);
+                if ($gstPct > 0) {
+                    $gstAmount = $itemTotal * $gstPct / 100;
+                    $totalGst += $gstAmount;
+                }
             }
         }
         
         $shipping = 0; // Free shipping
         $total = $subtotal + $shipping + $totalGst;
         
-        return view('frontend.checkout.index', compact('cart', 'customer', 'subtotal', 'totalGst', 'shipping', 'total'));
+        // Calculate B2B 2% discount
+        $b2bDiscountAmount = 0;
+        if ($customer->customer_type === 'dealer') {
+            $b2bDiscountAmount = ($total * 2) / 100;
+            $total -= $b2bDiscountAmount;
+        }
+        
+        return view('frontend.checkout.index', compact('cart', 'customer', 'subtotal', 'totalGst', 'shipping', 'b2bDiscountAmount', 'total'));
     }
     
     /**
@@ -217,6 +249,13 @@ class CheckoutController extends Controller
         $shipping = 0; // Free shipping
         $total = $subtotal + $shipping + $totalGst;
 
+        // Calculate B2B Extra 2% Discount
+        $b2bDiscountAmount = 0;
+        if ($customer->customer_type === 'dealer') {
+            $b2bDiscountAmount = ($total * 2) / 100;
+            $total -= $b2bDiscountAmount;
+        }
+
         // Calculate Bank Transfer Discount
         $btDiscountAmount = 0;
         if ($request->payment_method === 'bank_transfer' && $customer->bank_transfer_discount > 0) {
@@ -255,6 +294,7 @@ class CheckoutController extends Controller
             'shipping_state' => $request->use_same_address ? $request->billing_state : $request->shipping_state,
             'shipping_zip' => $request->use_same_address ? $request->billing_zip : $request->shipping_zip,
             'shipping_country' => $request->use_same_address ? $request->billing_country : $request->shipping_country,
+            'b2b_discount_amount' => $b2bDiscountAmount,
             'bank_transfer_discount_amount' => $btDiscountAmount,
         ]);
         

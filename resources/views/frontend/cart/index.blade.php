@@ -155,7 +155,7 @@
                 @endif
                 
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                    <span style="color: #6b7280;">GST Total:</span>
+                    <span style="color: #6b7280;">18% GST Total:</span>
                     <span style="font-weight: 500;">+ ₹{{ number_format($totalGst, 2) }}</span>
                 </div>
                 

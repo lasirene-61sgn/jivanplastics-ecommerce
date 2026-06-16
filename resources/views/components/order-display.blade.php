@@ -134,7 +134,7 @@
                                 </div>
                                 @endif
                             
-                            @if(request()->routeIs('b2b.*') && $item->dispatched_quantity > 0)
+                            <!-- @if(request()->routeIs('b2b.*') && $item->dispatched_quantity > 0)
                                 <div style="margin-top: 0.5rem;">
                                     @php
                                         // Check for active return requests (pending, approved, processing)
@@ -152,7 +152,7 @@
                                         </a>
                                     @endif
                                 </div>
-                            @endif
+                            @endif -->
 
                             @if($order->customer_type !== 'dealer')
                             <div style="margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 4px; font-style: italic; font-size: 0.7rem;">

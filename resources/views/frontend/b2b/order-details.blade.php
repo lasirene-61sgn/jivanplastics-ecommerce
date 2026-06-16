@@ -7,10 +7,10 @@
 <div class="b2b-content">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h2 class="b2b-section-title">Order #{{ $order->order_number }}</h2>
-        <div class="flex gap-2">
+        <!-- <div class="flex gap-2">
             <a href="{{ route('b2b.orders.return-requests', $order) }}" class="px-4 py-2 border-2 border-[#8B0000] text-[#8B0000] font-bold rounded hover:bg-[#8B0000] hover:text-white transition-colors">Return Requests</a>
             <a href="{{ route('b2b.orders') }}" class="px-4 py-2 border-2 border-slate-300 text-slate-600 font-bold rounded hover:bg-slate-100 transition-colors">Back</a>
-        </div>
+        </div> -->
     </div>
     
     <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 2rem; border: 4px solid #f8fafc;">
@@ -48,7 +48,7 @@
         @endif
     </div>
 
-    <div style="margin-top: 3rem;">
+    <!-- <div style="margin-top: 3rem;">
         <h3 class="b2b-section-title">Credit & Debit Notes</h3>
         @php
             $returnNotes = \App\Models\ReturnNote::where('order_id', $order->id)->get();
@@ -75,9 +75,9 @@
                 No credit or debit notes have been issued for this order.
             </div>
         @endif
-    </div>
+    </div> -->
 
-    <div style="margin-top: 3rem;">
+    <!-- <div style="margin-top: 3rem;">
         <h3 class="b2b-section-title">Return & Replacement Invoices</h3>
         @php
             $returnInvoices = $order->returnRequests->whereNotNull('invoice_proof_image');
@@ -108,7 +108,7 @@
                 No return/replacement invoices have been uploaded for this order.
             </div>
         @endif
-    </div>
+    </div> -->
 
     <div style="margin-top: 3rem;">
         @include('components.rejected-items-invoice', ['order' => $order])

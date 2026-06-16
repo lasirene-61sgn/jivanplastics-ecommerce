@@ -52,7 +52,7 @@
                 <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 2rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937;">Shipping Address</h2>
-                        <label style="display: flex; align-items: center; cursor: pointer; color: #8B0000; font-weight: 600;">
+                        <label for="use_same_address" style="display: flex; align-items: center; cursor: pointer; color: #8B0000; font-weight: 600;">
                             <input type="checkbox" id="use_same_address" name="use_same_address" value="1" {{ old('use_same_address') ? 'checked' : '' }} style="margin-right: 0.5rem;">
                             Same as billing address
                         </label>
@@ -61,23 +61,23 @@
                     <div id="shipping_address_fields" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                         <div style="grid-column: span 2;">
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4b5563;">Address *</label>
-                            <input type="text" id="shipping_address" name="shipping_address" value="{{ old('shipping_address') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            <input type="text" id="shipping_address" name="shipping_address" value="{{ old('shipping_address') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4b5563;">City *</label>
-                            <input type="text" id="shipping_city" name="shipping_city" value="{{ old('shipping_city') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            <input type="text" id="shipping_city" name="shipping_city" value="{{ old('shipping_city') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4b5563;">State *</label>
-                            <input type="text" id="shipping_state" name="shipping_state" value="{{ old('shipping_state') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            <input type="text" id="shipping_state" name="shipping_state" value="{{ old('shipping_state') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4b5563;">ZIP Code *</label>
-                            <input type="text" id="shipping_zip" name="shipping_zip" value="{{ old('shipping_zip') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            <input type="text" id="shipping_zip" name="shipping_zip" value="{{ old('shipping_zip') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4b5563;">Country *</label>
-                            <input type="text" id="shipping_country" name="shipping_country" value="{{ old('shipping_country') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            <input type="text" id="shipping_country" name="shipping_country" value="{{ old('shipping_country') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
                         </div>
                     </div>
                 </div>
@@ -161,9 +161,7 @@
                         @foreach($cart as $id => $item)
                             @php
                                 $product = \App\Models\Product::find($id);
-                                // session price is the actual pay price
                                 $unitToPay = $item['price'];
-                                // original_price from session, fallback to product price
                                 $unitBase = $item['original_price'] ?? ($product ? $product->price : $item['price']);
                                 
                                 $lineBase = $unitBase * $item['quantity'];
@@ -211,9 +209,16 @@
                         @endif
                         
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="color: #6b7280;">GST Total:</span>
+                            <span style="color: #6b7280;">18% GST Total:</span>
                             <span>+ ₹{{ number_format($totalGst, 2) }}</span>
                         </div>
+                        
+                        @if(isset($b2bDiscountAmount) && $b2bDiscountAmount > 0)
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #4f46e5; font-weight: 600;">
+                            <span>B2B Extra Discount (2%):</span>
+                            <span>- ₹{{ number_format($b2bDiscountAmount, 2) }}</span>
+                        </div>
+                        @endif
                         
                         <div id="bank_transfer_discount_row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; color: #10b981; font-weight: 600;">
                             <span>Bank Transfer Discount ({{ $customer->bank_transfer_discount }}%):</span>
@@ -222,7 +227,7 @@
                         
                         <div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 2px solid #f3f4f6; margin-top: 1rem;">
                             <span style="font-weight: 800; font-size: 1.25rem;">Grand Total:</span>
-                            <span style="font-weight: 800; font-size: 1.25rem; color: #8B0000;">₹<span id="grand_total_display">{{ number_format(($subtotal - $totalDiscount) + $totalGst, 2) }}</span></span>
+                            <span style="font-weight: 800; font-size: 1.25rem; color: #8B0000;">₹<span id="grand_total_display">{{ number_format((($subtotal - $totalDiscount) + $totalGst) - ($b2bDiscountAmount ?? 0), 2) }}</span></span>
                         </div>
                     </div>
                     
@@ -243,30 +248,45 @@
 
         function syncAddresses() {
             if (checkbox.checked) {
-                container.style.opacity = '0.5';
+                container.style.opacity = '0.6';
                 fields.forEach(f => {
                     const billing = document.getElementById('billing_' + f);
                     const shipping = document.getElementById('shipping_' + f);
+                    
+                    // Force input value synchronization
                     shipping.value = billing.value;
                     shipping.readOnly = true;
+                    
+                    // CRITICAL FIX: Strip required attribute if checked so empty hidden inputs don't break validation
+                    shipping.removeAttribute('required');
                 });
             } else {
                 container.style.opacity = '1';
                 fields.forEach(f => {
                     const shipping = document.getElementById('shipping_' + f);
                     shipping.readOnly = false;
+                    
+                    // CRITICAL FIX: Re-enable required attribute if unchecked
+                    shipping.setAttribute('required', 'required');
                 });
             }
         }
 
+        // Run sync on state change
         checkbox.addEventListener('change', syncAddresses);
         
-        // Update shipping if billing changes while checked
+        // Update shipping inputs in real-time if billing data shifts while checked
         fields.forEach(f => {
             document.getElementById('billing_' + f).addEventListener('input', function() {
-                if (checkbox.checked) syncAddresses();
+                if (checkbox.checked) {
+                    const shipping = document.getElementById('shipping_' + f);
+                    shipping.value = this.value;
+                }
             });
         });
+
+        // Run on initial page load (handles old form inputs after errors or session refresh)
+        syncAddresses();
 
         // Payment Method Logic
         const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
@@ -275,14 +295,16 @@
         const btDiscountValue = document.getElementById('bt_discount_value');
         const grandTotalDisplay = document.getElementById('grand_total_display');
         
-        const baseGrandTotal = {{ ($subtotal - $totalDiscount) + $totalGst }};
+        const b2bDiscountAmount = {{ $b2bDiscountAmount ?? 0 }};
+        const baseGrandTotal = {{ ($subtotal - $totalDiscount) + $totalGst }} - b2bDiscountAmount;
         const btDiscountPercent = {{ $customer->bank_transfer_discount ?? 0 }};
         
         function updateOrderSummary() {
-            const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
+            const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
+            const selectedMethod = checkedRadio ? checkedRadio.value : 'cod';
             
             if (selectedMethod === 'bank_transfer') {
-                bankTransferOptions.style.display = 'block';
+                if(bankTransferOptions) bankTransferOptions.style.display = 'block';
                 
                 if (btDiscountPercent > 0) {
                     const discount = (baseGrandTotal * btDiscountPercent) / 100;
@@ -294,7 +316,7 @@
                     grandTotalDisplay.innerText = baseGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                 }
             } else {
-                bankTransferOptions.style.display = 'none';
+                if(bankTransferOptions) bankTransferOptions.style.display = 'none';
                 btDiscountRow.style.display = 'none';
                 grandTotalDisplay.innerText = baseGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             }
@@ -304,7 +326,6 @@
             radio.addEventListener('change', updateOrderSummary);
         });
         
-        // Initial call
         updateOrderSummary();
     });
 </script>

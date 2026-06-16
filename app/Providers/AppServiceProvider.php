@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
+use App\Models\Order;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,5 +30,11 @@ class AppServiceProvider extends ServiceProvider
             'frontend.b2c.*',
             \App\Http\View\Composers\B2CNavigationComposer::class
         );
+
+        // Share new (pending) orders count to admin sidebar nav
+        View::composer('partials.admin-nav-links', function ($view) {
+            $newOrdersCount = Order::where('status', 'pending')->count();
+            $view->with('newOrdersCount', $newOrdersCount);
+        });
     }
 }

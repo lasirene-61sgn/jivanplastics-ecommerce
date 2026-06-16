@@ -108,6 +108,7 @@
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Product</th>
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">SKU</th>
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Ordered</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Ready</th>
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Dispatched</th>
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Rejected</th>
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Pending</th>
@@ -143,17 +144,27 @@
                             <td class="px-6 py-5 text-center">
                                 <div class="flex flex-col md:items-center mt-2 md:mt-0 gap-1">
                                     <span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-black text-slate-600">{{ $item->total_pieces }} pcs</span>
+                                    <span class="text-[10px] text-slate-400 italic font-medium">= {{ $item->quantity }} units</span>
                                 </div>
                             </td>
                             <td class="px-6 py-5 text-center">
-                                <div class="flex flex-col items-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="px-2.5 py-1 bg-green-50 rounded-lg text-xs font-black text-green-600">{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }} pcs</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-center">
+                                <div class="flex flex-col items-center gap-1">
                                     <span class="px-2.5 py-1 bg-green-50 rounded-lg text-xs font-black text-green-600">{{ $item->dispatched_quantity * $item->per_unit_pieces }} pcs</span>
+                                    <span class="text-[10px] text-slate-400 italic font-medium">= {{ $item->dispatched_quantity }} units</span>
                                 </div>
                             </td>
                             <td class="px-6 py-5 text-center">
                                 @if($item->rejected_pieces > 0)
-                                <div class="flex flex-col items-center">
+                                <div class="flex flex-col items-center gap-1">
                                     <span class="px-2.5 py-1 bg-rose-50 rounded-lg text-xs font-black text-rose-600" title="{{ $item->rejection_reason }}">{{ $item->rejected_pieces }} pcs</span>
+                                    @if($item->per_unit_pieces > 0)
+                                    <span class="text-[10px] text-slate-400 italic font-medium">= {{ number_format($item->rejected_pieces / $item->per_unit_pieces, 2) }} units</span>
+                                    @endif
                                 </div>
                                 @else
                                 <span class="text-slate-300 font-bold">-</span>
@@ -161,11 +172,15 @@
                             </td>
                             <td class="px-6 py-5 text-center">
                                 @if($item->manufacturing_pending_pieces > 0)
-                                <div class="flex flex-col items-center">
-                                    <span class="px-2.5 py-1 bg-amber-50 rounded-lg text-xs font-black text-amber-600">{{ max(0, $item->total_pieces - $item->manufactured_pieces - $item->rejected_pieces) }} pcs</span>
+                                @php $pendingPcs = max(0, $item->total_pieces - $item->manufactured_pieces - $item->rejected_pieces); @endphp
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="px-2.5 py-1 bg-amber-50 rounded-lg text-xs font-black text-amber-600">{{ $pendingPcs }} pcs</span>
+                                    @if($item->per_unit_pieces > 0)
+                                    <span class="text-[10px] text-slate-400 italic font-medium">= {{ number_format($pendingPcs / $item->per_unit_pieces, 2) }} units</span>
+                                    @endif
                                 </div>
                                 @else
-                                <span class="text-slate-300 font-bold">0</span>
+                                <span class="text-slate-300 font-bold">0 pcs</span>
                                 @endif
                             </td>
                             <td class="px-6 py-5 text-center">
@@ -208,8 +223,14 @@
                 </div>
                 @if($order->customer_type === 'dealer' && $order->discount_amount > 0)
                 <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
-                    <span>Applied Discounts:</span>
+                    <span>Dealer Discount:</span>
                     <span class="text-rose-600 italic">-₹{{ number_format($order->discount_amount ?? 0, 2) }}</span>
+                </div>
+                @endif
+                @if($order->b2b_discount_amount > 0)
+                <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
+                    <span>B2B Extra Discount (2%):</span>
+                    <span class="text-indigo-600 italic">-₹{{ number_format($order->b2b_discount_amount ?? 0, 2) }}</span>
                 </div>
                 @endif
                 <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
@@ -281,7 +302,12 @@
                 </div>
             </div>
             
-            @if($order->tentative_dispatch_date)
+           
+        </div>
+
+        <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl p-1 lg:p-2 border-4 border-slate-800">
+            
+        @if($order->tentative_dispatch_date)
             <div class="w-full lg:w-96 bg-white rounded-3xl border border-slate-200 p-8 space-y-4 shadow-sm mt-6">
                 <div class="flex justify-between items-center text-sm font-bold text-slate-500">
                     <span class="flex items-center gap-2">
@@ -293,15 +319,62 @@
                     <span class="text-indigo-600 font-black px-3 py-1 bg-indigo-50 rounded-lg">{{ \Carbon\Carbon::parse($order->tentative_dispatch_date)->format('M d, Y') }}</span>
                 </div>
             </div>
-            @endif
-        </div>
-
-        <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl p-1 lg:p-2 border-4 border-slate-800">
+        @endif
             <div class="bg-white rounded-[2rem] p-8 lg:p-12">
                 <h5 class="text-xl font-black text-slate-900 tracking-tight mb-8 flex items-center">
                     <span class="w-1.5 h-8 bg-indigo-600 mr-4 rounded-full"></span>
                     Manufacturing Control Center
                 </h5>
+
+                {{-- Edit Permission Alert Panel --}}
+                @if($order->mfg_edit_permission_granted)
+                    <div class="mb-6 p-4 bg-sky-50 border-l-4 border-sky-400 rounded-r-xl flex items-start gap-3">
+                        <svg class="w-5 h-5 text-sky-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>
+                            <p class="text-sm font-black text-sky-700">Edit Permission Currently Active</p>
+                            <p class="text-xs font-bold text-sky-600 mt-1">Manufacturing team can now correct their piece entries. Waiting for them to submit.</p>
+                            <span class="mt-2 inline-block text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-sky-100 text-sky-700 rounded-full">{{ $order->mfg_edit_permission_count }}/2 permissions used</span>
+                        </div>
+                    </div>
+                @elseif($order->mfg_edit_request_note)
+                    <div class="mb-6 p-5 bg-amber-50 border-l-4 border-amber-400 rounded-r-xl">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-black text-amber-700">⚠️ Manufacturing Team Requests Edit Permission</p>
+                                <p class="text-xs text-amber-600 font-bold mt-1">{{ $order->mfg_edit_request_at?->format('M d, Y H:i') }}</p>
+                                <div class="mt-2 p-3 bg-white rounded-xl border border-amber-200 text-sm text-slate-700 italic font-medium">
+                                    "{{ $order->mfg_edit_request_note }}"
+                                </div>
+                                <div class="mt-3 flex items-center gap-3">
+                                    @if($order->mfg_edit_permission_count < 2)
+                                        <form action="{{ route('admin.orders.grant-edit', $order) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" onclick="return confirm('Grant edit permission to manufacturing team? This will be {{ $order->mfg_edit_permission_count + 1 }} of 2 uses.')"
+                                                    class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl uppercase tracking-widest transition-all shadow-sm">
+                                                ✅ Grant Edit Permission
+                                            </button>
+                                        </form>
+                                        <span class="text-[10px] font-black text-amber-600 uppercase">{{ 2 - $order->mfg_edit_permission_count }} grants remaining</span>
+                                    @else
+                                        <span class="px-4 py-2 bg-rose-100 text-rose-700 text-xs font-black rounded-xl uppercase tracking-widest">⛔ Max 2 Grants Used — Cannot Grant More</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Edit permissions usage tracker --}}
+                @if($order->mfg_edit_permission_count > 0 || $order->manufacturing_status == 'processing')
+                <div class="mb-6 flex items-center gap-2">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Edit Corrections:</span>
+                    @for($i = 1; $i <= 2; $i++)
+                        <span class="w-6 h-6 rounded-full text-[10px] font-black flex items-center justify-center {{ $i <= $order->mfg_edit_permission_count ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400' }}">{{ $i }}</span>
+                    @endfor
+                    <span class="text-[10px] font-medium text-slate-400">{{ $order->mfg_edit_permission_count }}/2 used</span>
+                </div>
+                @endif
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     <div class="space-y-6">

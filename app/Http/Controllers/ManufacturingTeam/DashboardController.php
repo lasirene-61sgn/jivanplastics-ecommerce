@@ -312,4 +312,100 @@ class DashboardController extends Controller
         
         return redirect()->back()->with('success', 'Orders status updated successfully.');
     }
+
+    /**
+     * Manufacturing team submits a note requesting admin permission to edit wrongly-entered pieces.
+     */
+    public function requestEditPermission(Request $request, Order $order)
+    {
+        $manufacturingTeam = Auth::guard('manufacturing-team')->user();
+
+        if ($order->manufacturing_team_id != $manufacturingTeam->id) {
+            abort(403, 'Unauthorized access to this order.');
+        }
+
+        if ($order->mfg_edit_permission_count >= 2) {
+            return redirect()->back()->with('error', 'You have already used both edit permissions for this order. No more edit requests allowed.');
+        }
+
+        if ($order->mfg_edit_permission_granted) {
+            return redirect()->back()->with('info', 'You already have an active edit permission. Please use it to correct the pieces.');
+        }
+
+        $request->validate([
+            'edit_request_note' => 'required|string|max:500',
+        ]);
+
+        $order->update([
+            'mfg_edit_request_note' => $request->edit_request_note,
+            'mfg_edit_request_at'   => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Edit request sent to admin. Please wait for their approval before correcting your entries.');
+    }
+
+    /**
+     * Manufacturing team submits corrected piece values when admin permission is active.
+     * This REPLACES (not adds to) the existing manufactured/rejected pieces totals.
+     */
+    public function submitCorrectedPieces(Request $request, Order $order)
+    {
+        $manufacturingTeam = Auth::guard('manufacturing-team')->user();
+
+        if ($order->manufacturing_team_id != $manufacturingTeam->id) {
+            abort(403, 'Unauthorized access to this order.');
+        }
+
+        if (!$order->mfg_edit_permission_granted) {
+            return redirect()->back()->with('error', 'You do not have active edit permission for this order.');
+        }
+
+        $request->validate([
+            'corrected_manufactured_pieces' => 'required|array',
+            'corrected_manufactured_pieces.*' => 'integer|min:0',
+            'corrected_rejected_pieces'     => 'nullable|array',
+            'corrected_rejected_pieces.*'   => 'integer|min:0',
+            'correction_reason'             => 'required|string|max:500',
+        ]);
+
+        foreach ($request->corrected_manufactured_pieces as $itemId => $manufacturedPieces) {
+            $orderItem = OrderItem::where('id', $itemId)
+                ->where('order_id', $order->id)
+                ->first();
+
+            if (!$orderItem || $orderItem->per_unit_pieces <= 0) {
+                continue;
+            }
+
+            $rejectedPieces = isset($request->corrected_rejected_pieces[$itemId])
+                ? (int) $request->corrected_rejected_pieces[$itemId]
+                : 0;
+
+            $totalPieces = $orderItem->total_pieces;
+
+            // Validate total doesn't exceed what was ordered
+            if (($manufacturedPieces + $rejectedPieces) > $totalPieces) {
+                return redirect()->back()->with('error', "Total pieces for '{$orderItem->product_name}' cannot exceed ordered quantity ({$totalPieces} pcs).");
+            }
+
+            $newManufacturedUnits = $manufacturedPieces / $orderItem->per_unit_pieces;
+            $newRejectedUnits     = $rejectedPieces / $orderItem->per_unit_pieces;
+
+            $orderItem->update([
+                'manufactured_pieces'   => $manufacturedPieces,
+                'rejected_pieces'       => $rejectedPieces,
+                'manufactured_quantity' => $newManufacturedUnits,
+                'rejected_quantity'     => $newRejectedUnits,
+            ]);
+        }
+
+        // Consume the permission and clear the note
+        $order->update([
+            'mfg_edit_permission_granted' => false,
+            'mfg_edit_request_note'       => null,
+            'mfg_edit_request_at'         => null,
+        ]);
+
+        return redirect()->back()->with('success', 'Pieces corrected successfully. Your correction has been saved and the edit permission has been used.');
+    }
 }

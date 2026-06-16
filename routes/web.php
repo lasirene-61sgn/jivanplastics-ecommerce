@@ -126,6 +126,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/orders/{order}/manufacturing-status', [OrderController::class, 'updateManufacturingStatus'])->name('orders.update-manufacturing-status');
         Route::put('/orders/{order}/partial-dispatch', [OrderController::class, 'partialDispatch'])->name('orders.partial-dispatch');
         Route::post('/orders/{order}/dispatch', [OrderController::class, 'markAsDispatched'])->name('orders.dispatch');
+        Route::post('/orders/{order}/grant-edit', [OrderController::class, 'grantEditPermission'])->name('orders.grant-edit');
         
         // Return request management routes
         Route::get('/return-requests', [ReturnRequestController::class, 'index'])->name('return-requests.index');
@@ -236,6 +237,9 @@ Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function
         Route::put('/orders/{order}/partial-complete', [DashboardController::class, 'partialComplete'])->name('orders.partial-complete');
         Route::post('/orders/bulk-accept', [DashboardController::class, 'bulkAcceptOrders'])->name('orders.bulk-accept');
         Route::post('/orders/bulk-update', [DashboardController::class, 'bulkUpdateStatus'])->name('orders.bulk-update');
+        // Edit permission routes
+        Route::post('/orders/{order}/request-edit', [DashboardController::class, 'requestEditPermission'])->name('orders.request-edit');
+        Route::put('/orders/{order}/submit-correction', [DashboardController::class, 'submitCorrectedPieces'])->name('orders.submit-correction');
     });
 });
 
