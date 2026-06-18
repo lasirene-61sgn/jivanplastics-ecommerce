@@ -224,7 +224,8 @@ Route::prefix('sales-team')->name('sales-team.')->group(function () {
 Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function () {
     // Manufacturing Team Login Routes
     Route::get('/login', [ManufacturingTeamAuthController::class, 'showLoginForm'])->name('login')->middleware('manufacturing-team.guest');
-    Route::post('/login', [ManufacturingTeamAuthController::class, 'login'])->name('login');
+    Route::post('/send-otp', [ManufacturingTeamAuthController::class, 'sendOtp'])->name('send-otp')->middleware('manufacturing-team.guest');
+    Route::post('/verify-otp', [ManufacturingTeamAuthController::class, 'verifyOtp'])->name('verify-otp')->middleware('manufacturing-team.guest');
     Route::post('/logout', [ManufacturingTeamAuthController::class, 'logout'])->name('logout');
     
     // Manufacturing Team Dashboard Route

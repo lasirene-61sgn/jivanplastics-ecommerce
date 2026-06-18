@@ -19,31 +19,76 @@ class ManufacturingTeamAuthController extends Controller
     }
 
     /**
-     * Handle manufacturing team login.
+     * Handle sending OTP for manufacturing team login.
      */
-    public function login(Request $request)
+    public function sendOtp(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'phone' => 'required|numeric',
         ]);
 
-        // Find the manufacturing team by email
-        $manufacturingTeam = ManufacturingTeam::where('email', $request->email)->first();
+        $manufacturingTeam = ManufacturingTeam::where('phone', $request->phone)->first();
 
-        // Check if manufacturing team exists and password is correct
-        if ($manufacturingTeam && Hash::check($request->password, $manufacturingTeam->password)) {
+        if (!$manufacturingTeam) {
+            return response()->json(['success' => false, 'message' => 'No account found with this mobile number.']);
+        }
+
+        if (!$manufacturingTeam->is_active) {
+            return response()->json(['success' => false, 'message' => 'Your account is currently inactive.']);
+        }
+
+        // Generate OTP
+        $otp = rand(100000, 999999);
+        
+        // Store OTP in session (with phone number)
+        $request->session()->put('manufacturing_login_otp', $otp);
+        $request->session()->put('manufacturing_login_phone', $request->phone);
+
+        // Send OTP via Msg91Service
+        $msg91Service = new \App\Services\Msg91Service();
+        $sent = $msg91Service->sendOtp($request->phone, $otp);
+
+        if ($sent) {
+            return response()->json(['success' => true, 'message' => 'OTP sent successfully.']);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Failed to send OTP. Please try again.']);
+    }
+
+    /**
+     * Handle verifying OTP and logging in.
+     */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|numeric',
+            'otp' => 'required|numeric',
+        ]);
+
+        $sessionOtp = $request->session()->get('manufacturing_login_otp');
+        $sessionPhone = $request->session()->get('manufacturing_login_phone');
+
+        if ($sessionPhone != $request->phone || $sessionOtp != $request->otp) {
+            return response()->json(['success' => false, 'message' => 'Invalid OTP or Mobile Number.']);
+        }
+
+        $manufacturingTeam = ManufacturingTeam::where('phone', $request->phone)->first();
+
+        if ($manufacturingTeam) {
             // Log in the manufacturing team
             Auth::guard('manufacturing-team')->login($manufacturingTeam);
             
-            // Redirect to manufacturing team dashboard
-            return redirect()->route('manufacturing-team.dashboard');
+            // Clear session data
+            $request->session()->forget('manufacturing_login_otp');
+            $request->session()->forget('manufacturing_login_phone');
+
+            return response()->json([
+                'success' => true, 
+                'redirect' => route('manufacturing-team.dashboard')
+            ]);
         }
 
-        // If authentication fails
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->withInput($request->only('email'));
+        return response()->json(['success' => false, 'message' => 'Account not found.']);
     }
 
     /**

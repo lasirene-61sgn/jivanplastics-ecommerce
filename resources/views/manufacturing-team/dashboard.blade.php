@@ -172,7 +172,15 @@
                 }">
                     <div class="p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                         <div>
-                            <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Allocated <span class="text-rose-600">Workload</span></h3>
+                            <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                                @if($tab === 'allocated')
+                                Admin Allocated <span class="text-rose-600">Orders</span>
+                                @elseif($tab === 'accepted')
+                                Manufacturing Accepted <span class="text-rose-600">Orders</span>
+                                @else
+                                Completed <span class="text-rose-600">Orders</span>
+                                @endif
+                            </h3>
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage production cycles</p>
                         </div>
 
@@ -183,9 +191,26 @@
                         </div>
                     </div>
 
+                    <!-- Tabs Section -->
+                    <div class="px-8 pt-4 flex gap-4 border-b border-slate-50 overflow-x-auto">
+                        <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'allocated']) }}" class="pb-4 px-2 text-sm font-black tracking-tight {{ $tab === 'allocated' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-slate-500 hover:text-slate-900' }} transition-colors whitespace-nowrap">
+                            Admin Allocated Orders 
+                            <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] {{ $tab === 'allocated' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600' }}">{{ $allocatedCount }}</span>
+                        </a>
+                        <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'accepted']) }}" class="pb-4 px-2 text-sm font-black tracking-tight {{ $tab === 'accepted' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-slate-500 hover:text-slate-900' }} transition-colors whitespace-nowrap">
+                            Manufacturing Accepted Orders
+                            <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] {{ $tab === 'accepted' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600' }}">{{ $acceptedCount }}</span>
+                        </a>
+                        <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'completed']) }}" class="pb-4 px-2 text-sm font-black tracking-tight {{ $tab === 'completed' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-slate-500 hover:text-slate-900' }} transition-colors whitespace-nowrap">
+                            Completed Orders
+                            <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] {{ $tab === 'completed' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600' }}">{{ $completedCount }}</span>
+                        </a>
+                    </div>
+
                     @if($orders->count() > 0)
                     <form id="bulkActionForm" method="POST" class="p-0 m-0">
                         @csrf
+                        @if($tab !== 'completed')
                         <!-- Bulk Action Toolbar -->
                         <div class="bg-slate-50/50 p-4 px-8 border-b border-slate-50 flex flex-wrap items-center gap-4">
                             <label class="flex items-center gap-3 cursor-pointer group">
@@ -202,6 +227,7 @@
 
                             <div class="h-6 w-px bg-slate-200 mx-2 hidden sm:block"></div>
                             
+                            @if($tab === 'allocated')
                             <div class="flex items-center gap-2">
                                 <label for="bulk_dispatch_date" class="text-[10px] font-black text-slate-500 uppercase tracking-widest hidden md:block">Dispatch Date:</label>
                                 <input type="date" id="bulk_dispatch_date" name="tentative_dispatch_date" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400" min="{{ date('Y-m-d') }}">
@@ -210,11 +236,12 @@
                             <button type="button" id="bulkAcceptBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none" :disabled="selectedCount === 0">
                                 Bulk Accept
                             </button>
+                            @endif
 
+                            @if($tab === 'accepted')
                             <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2 ml-auto w-full sm:w-auto mt-2 sm:mt-0">
                                 <select name="bulk_status" id="bulkStatusSelect" class="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 text-slate-600 py-2.5">
                                     <option value="">Choose Status</option>
-                                    <option value="processing">Processing</option>
                                     <option value="completed">Completed</option>
                                     <option value="rejected">Rejected</option>
                                 </select>
@@ -224,7 +251,9 @@
                                     </svg>
                                 </button>
                             </div>
+                            @endif
                         </div>
+                        @endif
 
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -241,7 +270,7 @@
                                     @foreach($orders as $order)
                                     <tr class="group hover:bg-slate-50/50 transition-colors">
                                         <td class="py-6 px-8">
-                                            @if($order->manufacturing_status == 'allocated')
+                                            @if(in_array($order->manufacturing_status, ['allocated', 'processing']))
                                             <label class="cursor-pointer">
                                                 <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" class="order-checkbox hidden peer" @change="updateSelectedCount()">
                                                 <div class="w-6 h-6 border-2 border-slate-200 rounded-lg group-hover:border-rose-400 transition-colors peer-checked:bg-rose-600 peer-checked:border-rose-600 flex items-center justify-center">
@@ -425,61 +454,68 @@
             }
 
             // Bulk accept button
-            document.getElementById('bulkAcceptBtn').addEventListener('click', function() {
-                const orderIds = getSelectedIds();
-                const dispatchDate = document.getElementById('bulk_dispatch_date').value;
-                
-                if (orderIds.length === 0) return;
-                
-                if (!dispatchDate) {
-                    alert('Please select a tentative dispatch date before accepting the orders.');
-                    document.getElementById('bulk_dispatch_date').focus();
-                    return;
-                }
+            const bulkAcceptBtn = document.getElementById('bulkAcceptBtn');
+            if (bulkAcceptBtn) {
+                bulkAcceptBtn.addEventListener('click', function() {
+                    const orderIds = getSelectedIds();
+                    const dispatchDate = document.getElementById('bulk_dispatch_date').value;
+                    
+                    if (orderIds.length === 0) return;
+                    
+                    if (!dispatchDate) {
+                        alert('Please select a tentative dispatch date before accepting the orders.');
+                        document.getElementById('bulk_dispatch_date').focus();
+                        return;
+                    }
 
-                if (confirm(`Verify: Move all selected orders to Active Manufacturing status with dispatch date ${dispatchDate}?`)) {
-                    const form = document.getElementById('bulkActionForm');
-                    form.action = '{{ route("manufacturing-team.orders.bulk-accept") }}';
-                    form.submit();
-                }
-            });
+                    if (confirm(`Verify: Move all selected orders to Active Manufacturing status with dispatch date ${dispatchDate}?`)) {
+                        const form = document.getElementById('bulkActionForm');
+                        form.action = '{{ route("manufacturing-team.orders.bulk-accept") }}';
+                        form.submit();
+                    }
+                });
+            }
 
             // Bulk update button
-            document.getElementById('bulkUpdateBtn').addEventListener('click', function() {
-                const orderIds = getSelectedIds();
-                const statusSelect = document.getElementById('bulkStatusSelect');
-                const selectedStatus = statusSelect.value;
+            const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
+            if (bulkUpdateBtn) {
+                bulkUpdateBtn.addEventListener('click', function() {
+                    const orderIds = getSelectedIds();
+                    const statusSelect = document.getElementById('bulkStatusSelect');
+                    const selectedStatus = statusSelect.value;
 
-                if (orderIds.length === 0 || !selectedStatus) return;
+                    if (orderIds.length === 0 || !selectedStatus) return;
 
-                if (confirm(`Action: Mark ${orderIds.length} orders as ${selectedStatus.toUpperCase()}?`)) {
-                    const form = document.getElementById('bulkActionForm');
+                    if (confirm(`Action: Mark ${orderIds.length} orders as ${selectedStatus.toUpperCase()}?`)) {
+                        const form = document.getElementById('bulkActionForm');
 
-                    // Create hidden input for status
-                    const statusInput = document.createElement('input');
-                    statusInput.type = 'hidden';
-                    statusInput.name = 'manufacturing_status';
-                    statusInput.value = selectedStatus;
-                    form.appendChild(statusInput);
+                        // Create hidden input for status
+                        const statusInput = document.createElement('input');
+                        statusInput.type = 'hidden';
+                        statusInput.name = 'manufacturing_status';
+                        statusInput.value = selectedStatus;
+                        form.appendChild(statusInput);
 
-                    form.action = '{{ route("manufacturing-team.orders.bulk-update") }}';
-                    form.submit();
-                }
-            });
+                        form.action = '{{ route("manufacturing-team.orders.bulk-update") }}';
+                        form.submit();
+                    }
+                });
+            }
 
             // Individual accept buttons
             document.querySelectorAll('.accept-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     const orderId = this.getAttribute('data-order-id');
-                    const dispatchDate = document.getElementById('bulk_dispatch_date').value;
+                    const dispatchDateInput = document.getElementById('bulk_dispatch_date');
+                    const dispatchDate = dispatchDateInput ? dispatchDateInput.value : null;
                     
-                    if (!dispatchDate) {
+                    if (dispatchDateInput && !dispatchDate) {
                         alert('Please select a tentative dispatch date at the top before accepting.');
-                        document.getElementById('bulk_dispatch_date').focus();
+                        dispatchDateInput.focus();
                         return;
                     }
                     
-                    if (confirm(`Process this order individually with dispatch date ${dispatchDate}?`)) {
+                    if (confirm(`Process this order individually${dispatchDate ? ' with dispatch date ' + dispatchDate : ''}?`)) {
                         const form = document.getElementById('bulkActionForm');
                         form.action = '{{ route("manufacturing-team.orders.bulk-accept") }}';
 

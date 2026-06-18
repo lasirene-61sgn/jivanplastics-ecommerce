@@ -13,17 +13,33 @@ class DashboardController extends Controller
     /**
      * Display the manufacturing team dashboard.
      */
-    public function index()
+    public function index(Request $request)
     {
         $manufacturingTeam = Auth::guard('manufacturing-team')->user();
         
-        // Get orders allocated to this manufacturing team
-        $orders = Order::where('manufacturing_team_id', $manufacturingTeam->id)
-            ->with('customer')
-            ->latest()
-            ->paginate(20);
+        $tab = $request->query('tab', 'allocated');
         
-        return view('manufacturing-team.dashboard', compact('manufacturingTeam', 'orders'));
+        $baseQuery = Order::where('manufacturing_team_id', $manufacturingTeam->id);
+        
+        $allocatedCount = (clone $baseQuery)->where('manufacturing_status', 'allocated')->count();
+        $acceptedCount = (clone $baseQuery)->where('manufacturing_status', 'processing')->count();
+        $completedCount = (clone $baseQuery)->where('manufacturing_status', 'completed')->count();
+        
+        $query = (clone $baseQuery)->with('customer');
+        
+        if ($tab === 'allocated') {
+            $query->where('manufacturing_status', 'allocated');
+        } elseif ($tab === 'accepted') {
+            $query->where('manufacturing_status', 'processing');
+        } elseif ($tab === 'completed') {
+            $query->where('manufacturing_status', 'completed');
+        }
+        
+        // Get orders allocated to this manufacturing team
+        $orders = $query->latest()->paginate(20);
+        $orders->appends(['tab' => $tab]);
+        
+        return view('manufacturing-team.dashboard', compact('manufacturingTeam', 'orders', 'tab', 'allocatedCount', 'acceptedCount', 'completedCount'));
     }
     
     /**

@@ -611,7 +611,7 @@
                                                         </label>
                                                         <span class="text-[10px] font-black text-slate-400 bg-white px-2 py-1 rounded shadow-sm border border-slate-200">Max: {{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}</span>
                                                     </div>
-                                                    <input type="number" name="dispatched_pieces[{{ $item->id }}]" class="w-full px-5 py-3 rounded-xl border-slate-200 text-lg font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-inner bg-white" min="0" max="{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}" value="0" required>
+                                                    <input type="text" name="dispatched_pieces[{{ $item->id }}]" class="w-full px-5 py-3 rounded-xl border-slate-200 text-lg font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-inner bg-white" min="0" max="{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}" value="0" required>
                                                 </div>
                                             </div>
                                         </div>

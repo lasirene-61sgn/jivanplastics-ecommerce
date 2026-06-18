@@ -477,7 +477,7 @@
                                     <div style="display: flex; gap: 10px;">
                                         <div style="flex: 1;">
                                             <label style="font-size: 12px; color: #666; font-weight: 600;">Completed Pieces</label>
-                                            <input type="number" 
+                                            <input type="text" 
                                                    name="completed_pieces[{{ $item->id }}]" 
                                                    class="form-control" 
                                                    min="0" 
@@ -487,7 +487,7 @@
                                         </div>
                                         <div style="flex: 1;">
                                             <label style="font-size: 12px; color: #dc3545; font-weight: 600;">Rejected Pieces</label>
-                                            <input type="number" 
+                                            <input type="text" 
                                                    name="rejected_pieces[{{ $item->id }}]" 
                                                    class="form-control" 
                                                    min="0" 
@@ -708,4 +708,4 @@
         @endif
     </div>
 </body>
-</html>
+</html>
