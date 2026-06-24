@@ -66,6 +66,18 @@
             <div class="stat-value" style="font-size: 2rem; font-weight: 600; color: #20c997; margin-bottom: 0.5rem;">{{ $b2cOrders }}</div>
             <div class="stat-label" style="font-size: 1rem; color: #6b7280;">B2C Orders</div>
         </div>
+
+        <!-- Pending Return Requests -->
+        <div class="stat-card" style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); padding: 1.5rem; text-align: center; border-top: 4px solid #f59e0b;">
+            <div class="stat-value" style="font-size: 2rem; font-weight: 600; color: #f59e0b; margin-bottom: 0.5rem;">{{ $pendingReturnRequests }}</div>
+            <div class="stat-label" style="font-size: 1rem; color: #6b7280;">Pending Returns</div>
+        </div>
+
+        <!-- Completed Return Requests -->
+        <div class="stat-card" style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); padding: 1.5rem; text-align: center; border-top: 4px solid #10b981;">
+            <div class="stat-value" style="font-size: 2rem; font-weight: 600; color: #10b981; margin-bottom: 0.5rem;">{{ $completedReturnRequests }}</div>
+            <div class="stat-label" style="font-size: 1rem; color: #6b7280;">Completed Returns</div>
+        </div>
         
     </div>
     

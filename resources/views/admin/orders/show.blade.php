@@ -559,6 +559,52 @@
                             </div>
                             @endif
 
+                            {{-- Return Request to Manufacturing Form --}}
+                            <div class="mt-8 pt-6 border-t border-slate-100">
+                                <h6 class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-4">Send Return Request to Manufacturing</h6>
+                                @if($order->manufacturingTeam)
+                                <form action="{{ route('admin.orders.return-request.store', $order) }}" method="POST" class="space-y-4">
+                                    @csrf
+                                    <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        @foreach($order->items as $index => $item)
+                                        <div class="p-4 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col gap-3">
+                                            <div class="flex items-start gap-3">
+                                                <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="mt-1 w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500">
+                                                <input type="hidden" name="items[{{ $index }}][order_item_id]" value="{{ $item->id }}">
+                                                <div class="flex-1">
+                                                    <div class="text-xs font-black text-slate-800">{{ $item->product_name }}</div>
+                                                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+                                                        Ordered: {{ $item->total_pieces }} pcs <span class="mx-1">•</span> 
+                                                        Completed: <span class="{{ $item->manufactured_pieces > 0 ? 'text-emerald-600 font-black' : 'text-slate-400' }}">{{ $item->manufactured_pieces ?? 0 }} pcs</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3 pl-7">
+                                                <div>
+                                                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Return Qty (Units)</label>
+                                                    <input type="number" name="items[{{ $index }}][quantity]" min="0" step="0.01" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50 focus:bg-white focus:border-rose-500 outline-none transition-colors" placeholder="0">
+                                                </div>
+                                                <div>
+                                                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Return Pieces</label>
+                                                    <input type="number" name="items[{{ $index }}][pieces]" min="0" step="1" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50 focus:bg-white focus:border-rose-500 outline-none transition-colors" placeholder="0">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endforeach
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Bulk Reason / Notes</label>
+                                        <textarea name="reason" rows="2" class="w-full p-4 rounded-2xl border border-slate-200 text-xs italic outline-none focus:border-rose-500 bg-slate-50" placeholder="Describe the reason for returning these items..."></textarea>
+                                    </div>
+                                    <button type="submit" class="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">Send Bulk Return to Manufacturing</button>
+                                </form>
+                                @else
+                                <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-center italic text-amber-600 text-xs font-bold">
+                                    Assign a manufacturing team to this order first to create a return request.
+                                </div>
+                                @endif
+                            </div>
+
                         </div>
 
                         @if($order->has_pending_items)

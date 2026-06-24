@@ -8,8 +8,8 @@
 <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-slate-900">Return & Exchange Requests</h2>
-            <p class="text-sm text-slate-500 font-medium italic">Manage customer inquiries regarding product returns and replacements.</p>
+            <h2 class="text-2xl font-bold text-slate-900">Return Requests</h2>
+            <p class="text-sm text-slate-500 font-medium italic">Manage customer inquiries regarding product returns.</p>
         </div>
     </div>
 
@@ -31,8 +31,25 @@
                         @foreach($returnRequests as $request)
                             <tr class="hover:bg-slate-50/30 transition-colors group">
                                 <td class="px-6 py-4">
-                                    <div class="text-sm font-black text-slate-900">#{{ $request->order->order_number }}</div>
-                                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{{ $request->created_at->format('d M, Y') }}</div>
+                                    @php
+                                        $lineNum = $request->order->items->search(function($item) use ($request) {
+                                            return $item->id === $request->order_item_id;
+                                        });
+                                        $lineNum = $lineNum !== false ? $lineNum + 1 : 1;
+                                    @endphp
+                                    <div class="text-sm font-black text-rose-600">RR{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</div>
+                                    <div class="text-xs font-black text-slate-900 mt-0.5">Ord: #{{ $request->order->order_number }}</div>
+                                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{{ $request->created_at->format('d M, Y') }}</div>
+                                    
+                                    @if($request->order->manufacturingTeam)
+                                    <div class="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                        <div class="text-[10px] font-black text-slate-700 uppercase tracking-widest">{{ $request->order->manufacturingTeam->factory_name }}</div>
+                                        <div class="flex flex-col mt-1 space-y-0.5">
+                                            <span class="text-[9px] text-slate-500 font-bold">Alloc: {{ $request->created_at->format('d M, y') }}</span>
+                                            <span class="text-[9px] text-slate-500 font-bold">Comp: {{ $request->resolved_at ? $request->resolved_at->format('d M, y') : 'Pending' }}</span>
+                                        </div>
+                                    </div>
+                                    @endif
                                 </td>
 
                                 <td class="px-6 py-4">
@@ -69,7 +86,7 @@
 
                                 <td class="px-6 py-4 text-right whitespace-nowrap">
                                     <a href="{{ route('admin.return-requests.show', $request) }}" class="inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest rounded-xl shadow-sm hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all active:scale-95">
-                                        Inspect
+                                        View
                                     </a>
                                 </td>
                             </tr>

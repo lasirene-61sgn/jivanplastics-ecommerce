@@ -35,11 +35,25 @@ class DashboardController extends Controller
             $query->where('manufacturing_status', 'completed');
         }
         
-        // Get orders allocated to this manufacturing team
         $orders = $query->latest()->paginate(20);
         $orders->appends(['tab' => $tab]);
+
+        $returnRequestsCount = \App\Models\ReturnRequest::whereHas('order', function($q) use ($manufacturingTeam) {
+            $q->where('manufacturing_team_id', $manufacturingTeam->id);
+        })->count();
         
-        return view('manufacturing-team.dashboard', compact('manufacturingTeam', 'orders', 'tab', 'allocatedCount', 'acceptedCount', 'completedCount'));
+        $returnRequests = null;
+        if ($tab === 'returns') {
+            $returnRequests = \App\Models\ReturnRequest::with(['order', 'orderItem.product'])
+                ->whereHas('order', function($q) use ($manufacturingTeam) {
+                    $q->where('manufacturing_team_id', $manufacturingTeam->id);
+                })
+                ->latest()
+                ->paginate(20);
+            $returnRequests->appends(['tab' => $tab]);
+        }
+        
+        return view('manufacturing-team.dashboard', compact('manufacturingTeam', 'orders', 'returnRequests', 'tab', 'allocatedCount', 'acceptedCount', 'completedCount', 'returnRequestsCount'));
     }
     
     /**
@@ -423,5 +437,31 @@ class DashboardController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Pieces corrected successfully. Your correction has been saved and the edit permission has been used.');
+    }
+
+    /**
+     * Update the status of a return request assigned to this manufacturing team.
+     */
+    public function updateReturnStatus(Request $request, \App\Models\ReturnRequest $returnRequest)
+    {
+        $manufacturingTeam = Auth::guard('manufacturing-team')->user();
+
+        // Verify the return request's order is assigned to this team
+        if ($returnRequest->order->manufacturing_team_id != $manufacturingTeam->id) {
+            abort(403, 'Unauthorized access to this return request.');
+        }
+
+        $request->validate([
+            'status' => 'required|in:processing,completed',
+        ]);
+
+        $updateData = ['status' => $request->status];
+        if ($request->status === 'completed' && is_null($returnRequest->resolved_at)) {
+            $updateData['resolved_at'] = now();
+        }
+
+        $returnRequest->update($updateData);
+
+        return redirect()->back()->with('success', 'Return request status updated to ' . ucfirst($request->status) . '.');
     }
 }

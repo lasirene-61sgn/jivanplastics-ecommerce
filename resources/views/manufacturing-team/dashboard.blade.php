@@ -185,7 +185,16 @@
                         </div>
 
                         <div class="flex items-center gap-3">
-                            <span x-show="selectedCount > 0" x-cloak class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black border border-rose-100 uppercase tracking-widest">
+                            <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'returns']) }}" class="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                </svg>
+                                Return Requests
+                                @if($returnRequestsCount > 0)
+                                <span class="px-1.5 py-0.5 rounded-md bg-white shadow-sm text-rose-700">{{ $returnRequestsCount }}</span>
+                                @endif
+                            </a>
+                            <span x-show="selectedCount > 0" x-cloak class="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black border border-slate-100 uppercase tracking-widest">
                                 <span x-text="selectedCount"></span> Selected
                             </span>
                         </div>
@@ -207,6 +216,82 @@
                         </a>
                     </div>
 
+                    @if($tab === 'returns')
+                        @if($returnRequests->count() > 0)
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50/30">
+                                            <th class="py-5 px-8 font-black">Order Ref</th>
+                                            <th class="py-5 px-4 font-black">Product</th>
+                                            <th class="py-5 px-4 font-black">Qty / Pieces</th>
+                                            <th class="py-5 px-4 font-black text-center">Status</th>
+                                            <th class="py-5 px-8 text-right font-black">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50">
+                                        @foreach($returnRequests as $return)
+                                        <tr class="group hover:bg-slate-50/50 transition-colors">
+                                            <td class="py-6 px-8">
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-black text-slate-900 tracking-tight">#{{ $return->order->order_number }}</span>
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $return->created_at->format('d M, Y') }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-6 px-4">
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-black text-slate-900 tracking-tight">{{ $return->orderItem->product_name }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-6 px-4">
+                                                <span class="text-xs font-black text-slate-700 tracking-tight">{{ $return->quantity }} units / {{ $return->pieces }} pcs</span>
+                                            </td>
+                                            <td class="py-6 px-4 text-center">
+                                                @php
+                                                $statusColors = [
+                                                'pending' => 'bg-amber-50 text-amber-600 border-amber-100',
+                                                'processing' => 'bg-blue-50 text-blue-600 border-blue-100',
+                                                'completed' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                                                'rejected' => 'bg-rose-50 text-rose-600 border-rose-100',
+                                                ];
+                                                $colorClass = $statusColors[$return->status] ?? 'bg-slate-50 text-slate-600 border-slate-100';
+                                                @endphp
+                                                <span class="px-3 py-1 rounded-lg border {{ $colorClass }} text-[10px] font-black uppercase tracking-widest">
+                                                    {{ $return->status }}
+                                                </span>
+                                            </td>
+                                            <td class="py-6 px-8 text-right">
+                                                @if($return->status == 'pending' || $return->status == 'processing')
+                                                <form action="{{ route('manufacturing-team.returns.status', $return) }}" method="POST" class="inline-flex items-center gap-2">
+                                                    @csrf @method('PUT')
+                                                    <select name="status" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:border-rose-500 outline-none">
+                                                        <option value="processing" {{ $return->status == 'processing' ? 'selected' : '' }}>Processing</option>
+                                                        <option value="completed" {{ $return->status == 'completed' ? 'selected' : '' }}>Completed</option>
+                                                    </select>
+                                                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">Update</button>
+                                                </form>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-8 bg-slate-50/30 border-t border-slate-100">
+                                {{ $returnRequests->links() }}
+                            </div>
+                        @else
+                            <div class="p-20 text-center">
+                                <div class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-300 mx-auto mb-6">
+                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-xl font-black text-slate-900 uppercase tracking-tight">No Return Requests</h4>
+                                <p class="text-slate-400 text-sm mt-2">You don't have any pending return requests.</p>
+                            </div>
+                        @endif
+                    @else
                     @if($orders->count() > 0)
                     <form id="bulkActionForm" method="POST" class="p-0 m-0">
                         @csrf
@@ -344,6 +429,7 @@
                         <h4 class="text-xl font-black text-slate-900 uppercase tracking-tight">Zero Load Currently</h4>
                         <p class="text-slate-400 text-sm mt-2">Check back later for new order allocations</p>
                     </div>
+                    @endif
                     @endif
                 </div>
             </div>

@@ -44,6 +44,59 @@ class ReturnRequestController extends Controller
      * @param  \App\Models\ReturnRequest  $returnRequest
      * @return \Illuminate\Http\RedirectResponse
      */
+    public function storeManufacturingReturn(Request $request, \App\Models\Order $order)
+    {
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.order_item_id' => 'required|exists:order_items,id',
+            'items.*.quantity' => 'nullable|numeric|min:0',
+            'items.*.pieces' => 'nullable|integer|min:0',
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        if (!$order->manufacturing_team_id) {
+            return redirect()->back()->with('error', 'This order is not assigned to a manufacturing team.');
+        }
+
+        $createdCount = 0;
+
+        foreach ($request->items as $itemData) {
+            $qty = $itemData['quantity'] ?? 0;
+            $pcs = $itemData['pieces'] ?? 0;
+
+            if ($qty > 0 || $pcs > 0) {
+                // Determine if item is actually checked
+                if (isset($itemData['selected']) && $itemData['selected']) {
+                    ReturnRequest::create([
+                        'order_id' => $order->id,
+                        'order_item_id' => $itemData['order_item_id'],
+                        'customer_id' => $order->customer_id,
+                        'reason' => $request->reason ?? 'Manufacturing Return',
+                        'type' => 'return',
+                        'quantity' => $qty,
+                        'pieces' => $pcs,
+                        'status' => 'pending',
+                        'admin_notes' => 'Sent back to manufacturing team for return/correction.',
+                    ]);
+                    $createdCount++;
+                }
+            }
+        }
+
+        if ($createdCount === 0) {
+            return redirect()->back()->with('error', 'Please select at least one item with a quantity or pieces greater than zero.');
+        }
+
+        return redirect()->back()->with('success', "{$createdCount} return request(s) created and sent to the manufacturing team.");
+    }
+
+    /**
+     * Update the status of a return request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\ReturnRequest  $returnRequest
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function updateStatus(Request $request, ReturnRequest $returnRequest)
     {
         $request->validate([

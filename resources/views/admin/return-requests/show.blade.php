@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'Return Request Details')
 
@@ -11,8 +11,14 @@
             <div class="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
             </div>
+            @php
+                $lineNum = $returnRequest->order->items->search(function($item) use ($returnRequest) {
+                    return $item->id === $returnRequest->order_item_id;
+                });
+                $lineNum = $lineNum !== false ? $lineNum + 1 : 1;
+            @endphp
             <div>
-                <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase italic">ID: #RE-{{ $returnRequest->id }}</h2>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase italic">ID: RR{{ str_pad($returnRequest->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</h2>
                 <p class="text-xs text-slate-400 font-bold tracking-widest uppercase">Post-Purchase Ticket</p>
             </div>
         </div>
@@ -64,14 +70,33 @@
                         </div>
                         @endif
                     </div>
+                    @if($returnRequest->order->manufacturingTeam)
                     <div class="sm:col-span-2 pt-6 border-t border-slate-50">
-                        <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-2 italic">Stated Reason from Customer</p>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Manufacturing Information</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <div>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Unit</p>
+                                <p class="text-sm font-black text-slate-900">{{ $returnRequest->order->manufacturingTeam->factory_name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Allocated Date</p>
+                                <p class="text-sm font-black text-slate-900">{{ $returnRequest->created_at->format('d M, Y') }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Return Completed Date</p>
+                                <p class="text-sm font-black text-slate-900">{{ $returnRequest->resolved_at ? $returnRequest->resolved_at->format('d M, Y') : 'Pending' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    <div class="sm:col-span-2 pt-6 border-t border-slate-50">
+                        <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-2 italic">Stated Reason from Customer / Admin</p>
                         <p class="text-base text-slate-600 leading-relaxed font-medium">"{{ $returnRequest->reason }}"</p>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+            <!-- <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50">
                     <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Dealer Evidence</h3>
                 </div>
@@ -101,7 +126,7 @@
                         @endif
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50">

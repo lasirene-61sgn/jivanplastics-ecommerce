@@ -133,6 +133,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/return-requests/{returnRequest}', [ReturnRequestController::class, 'show'])->name('return-requests.show');
         Route::get('/return-requests/{returnRequest}/return-note/{returnNote}', [ReturnRequestController::class, 'showReturnNote'])->name('return-requests.return-note');
         Route::put('/return-requests/{returnRequest}/status', [ReturnRequestController::class, 'updateStatus'])->name('return-requests.update-status');
+        Route::post('/orders/{order}/return-request', [ReturnRequestController::class, 'storeManufacturingReturn'])->name('orders.return-request.store');
         
         // Reward management routes
         Route::post('/rewards', [RewardController::class, 'store'])->name('rewards.store');
@@ -241,6 +242,9 @@ Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function
         // Edit permission routes
         Route::post('/orders/{order}/request-edit', [DashboardController::class, 'requestEditPermission'])->name('orders.request-edit');
         Route::put('/orders/{order}/submit-correction', [DashboardController::class, 'submitCorrectedPieces'])->name('orders.submit-correction');
+        
+        // Return requests
+        Route::put('/returns/{returnRequest}/status', [DashboardController::class, 'updateReturnStatus'])->name('returns.status');
     });
 });
 

@@ -37,6 +37,9 @@ class AdminDashboardController extends Controller
         
         $latestOrders = Order::with('customer')->latest()->take(10)->get();
 
+        $pendingReturnRequests = \App\Models\ReturnRequest::where('status', 'pending')->count();
+        $completedReturnRequests = \App\Models\ReturnRequest::where('status', 'completed')->count();
+
         return view('admin.dashboard', compact(
             'totalDealers',
             'totalUsers',
@@ -48,7 +51,9 @@ class AdminDashboardController extends Controller
             'salesTeamCount',
             'b2bOrders',
             'b2cOrders',
-            'latestOrders'
+            'latestOrders',
+            'pendingReturnRequests',
+            'completedReturnRequests'
         ));
     }
 }
