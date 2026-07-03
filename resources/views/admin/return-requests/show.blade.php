@@ -192,7 +192,7 @@
             @if($returnRequest->status !== 'completed')
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
                 <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2">Admin Resolution</h3>
-                <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <!-- <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
                     @method('PUT')
                     
@@ -254,10 +254,10 @@
                     <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 transition-all active:scale-95">
                         Commit Resolution
                     </button>
-                </form>
+                </form> -->
             </div>
             @else
-                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
+                <!-- <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 italic">Dispatch Proof</h3>
@@ -296,7 +296,7 @@
                             {{ $returnRequest->admin_notes ?? 'No internal audit notes were archived for this request.' }}
                         </div>
                     </div>
-                </div>
+                </div> -->
             @endif
         </div>
     </div>
