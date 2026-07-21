@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::table('order_items', function (Blueprint $table) {
             $table->decimal('quantity', 12, 4)->change();
-            $table->decimal('manufactured_quantity', 12, 4)->change();
-            $table->decimal('rejected_quantity', 12, 4)->change();
-            $table->decimal('dispatched_quantity', 12, 4)->change();
+            $table->decimal('manufactured_quantity', 12, 4)->change()->nullable();
+            $table->decimal('rejected_quantity', 12, 4)->change()->nullable();
+            $table->decimal('dispatched_quantity', 12, 4)->change()->nullable();
         });
 
         Schema::table('cart_items', function (Blueprint $table) {

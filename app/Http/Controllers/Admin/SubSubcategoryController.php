@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Subcategory;
 use App\Models\SubSubcategory;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class SubSubcategoryController extends Controller
 {
@@ -75,6 +77,15 @@ class SubSubcategoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'created',
+            'model_type' => 'SubSubcategory',
+            'model_id' => $subSubcategory->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $subSubcategory->name]
+        ]);
+
         return redirect()->route('admin.sub_subcategories.index')
             ->with('success', 'Sub-Subcategory created successfully.');
     }
@@ -137,6 +148,15 @@ class SubSubcategoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'updated',
+            'model_type' => 'SubSubcategory',
+            'model_id' => $subSubcategory->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $subSubcategory->name]
+        ]);
+
         return redirect()->route('admin.sub_subcategories.index')
             ->with('success', 'Sub-Subcategory updated successfully.');
     }
@@ -149,7 +169,17 @@ class SubSubcategoryController extends Controller
      */
     public function destroy(SubSubcategory $subSubcategory)
     {
+        $name = $subSubcategory->name;
         $subSubcategory->delete();
+
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'deleted',
+            'model_type' => 'SubSubcategory',
+            'model_id' => null,
+            'ip_address' => request()->ip(),
+            'details' => ['name' => $name]
+        ]);
 
         return redirect()->route('admin.sub_subcategories.index')
             ->with('success', 'Sub-Subcategory deleted successfully.');

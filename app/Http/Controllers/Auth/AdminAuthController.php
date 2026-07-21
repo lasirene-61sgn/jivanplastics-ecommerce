@@ -38,6 +38,23 @@ class AdminAuthController extends Controller
 
         if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
+            
+            $admin = Auth::guard('admin')->user();
+            $admin->last_login_ip = $admin->current_login_ip;
+            
+            // Get real IP
+            $ip = $request->header('CF-Connecting-IP') 
+                ?? $request->header('X-Forwarded-For') 
+                ?? $request->header('X-Real-IP')
+                ?? $request->ip();
+
+            if (strpos($ip, ',') !== false) {
+                $ip = explode(',', $ip)[0];
+            }
+            $admin->current_login_ip = trim($ip);
+            $admin->last_login_at = now();
+            $admin->save();
+
             return redirect()->intended(route('admin.dashboard'));
         }
 

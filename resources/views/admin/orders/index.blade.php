@@ -26,6 +26,103 @@
         </div>
     </div>
 
+    <!-- Filter Form -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <form action="{{ route('admin.orders.index') }}" method="GET" class="flex flex-col gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Search -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Search</label>
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Order ID, Customer Name..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+                </div>
+
+                <!-- Customer Type -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Customer Type</label>
+                    <select name="customer_type" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white">
+                        <option value="">All Types</option>
+                        <option value="dealer" {{ request('customer_type') == 'dealer' ? 'selected' : '' }}>B2B (Dealer)</option>
+                        <option value="individual" {{ request('customer_type') == 'individual' ? 'selected' : '' }}>B2C (Individual)</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Status</label>
+                    <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white">
+                        <option value="">All Statuses</option>
+                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>New / Pending</option>
+                        <option value="allocated" {{ request('status') == 'allocated' ? 'selected' : '' }}>Allocated (Mfg)</option>
+                        <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Processing / Mfg Accepted</option>
+                        <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected (Mfg)</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    </select>
+                </div>
+
+                <!-- Per Page -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Per Page</label>
+                    <select name="per_page" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white">
+                        @foreach([10, 20, 30, 50, 100, 200, 500] as $num)
+                            <option value="{{ $num }}" {{ request('per_page', 20) == $num ? 'selected' : '' }}>{{ $num }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category</label>
+                    <select name="category_id" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        @if(isset($categories))
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Subcategory -->
+                @if(request()->filled('category_id') && isset($subcategories) && count($subcategories) > 0)
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Subcategory</label>
+                    <select name="subcategory_id" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" onchange="this.form.submit()">
+                        <option value="">All Subcategories</option>
+                        @foreach($subcategories as $subcat)
+                            <option value="{{ $subcat->id }}" {{ request('subcategory_id') == $subcat->id ? 'selected' : '' }}>{{ $subcat->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+
+                <!-- Sub-Subcategory -->
+                @if(request()->filled('subcategory_id') && isset($subSubcategories) && count($subSubcategories) > 0)
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Sub-Subcategory</label>
+                    <select name="sub_subcategory_id" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" onchange="this.form.submit()">
+                        <option value="">All Sub-Subcategories</option>
+                        @foreach($subSubcategories as $sscat)
+                            <option value="{{ $sscat->id }}" {{ request('sub_subcategory_id') == $sscat->id ? 'selected' : '' }}>{{ $sscat->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+            </div>
+
+            <div class="flex justify-end gap-2 mt-2">
+                @if(request()->anyFilled(['search', 'customer_type', 'status', 'category_id']))
+                    <a href="{{ route('admin.orders.index') }}" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-sm transition-colors">
+                        Clear Filters
+                    </a>
+                @endif
+                <button type="submit" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-sm transition-colors">
+                    Filter Orders
+                </button>
+            </div>
+        </form>
+    </div>
+
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         @if(session('success'))
             <div class="m-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-r-lg flex items-center shadow-sm text-sm">
@@ -104,6 +201,12 @@
                     </tbody>
                 </table>
             </div>
+            
+            @if($orders->hasPages())
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                    {{ $orders->links() }}
+                </div>
+            @endif
 
             <div x-show="modalOpen" class="fixed inset-0 z-[60] overflow-y-auto" x-cloak>
                 <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">

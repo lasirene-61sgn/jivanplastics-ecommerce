@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Subcategory;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class SubcategoryController extends Controller
 {
@@ -75,6 +77,15 @@ class SubcategoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'created',
+            'model_type' => 'Subcategory',
+            'model_id' => $subcategory->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $subcategory->name]
+        ]);
+
         return redirect()->route('admin.subcategories.index')
             ->with('success', 'Subcategory created successfully.');
     }
@@ -137,6 +148,15 @@ class SubcategoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'updated',
+            'model_type' => 'Subcategory',
+            'model_id' => $subcategory->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $subcategory->name]
+        ]);
+
         return redirect()->route('admin.subcategories.index')
             ->with('success', 'Subcategory updated successfully.');
     }
@@ -149,7 +169,17 @@ class SubcategoryController extends Controller
      */
     public function destroy(Subcategory $subcategory)
     {
+        $name = $subcategory->name;
         $subcategory->delete();
+
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'deleted',
+            'model_type' => 'Subcategory',
+            'model_id' => null,
+            'ip_address' => request()->ip(),
+            'details' => ['name' => $name]
+        ]);
 
         return redirect()->route('admin.subcategories.index')
             ->with('success', 'Subcategory deleted successfully.');

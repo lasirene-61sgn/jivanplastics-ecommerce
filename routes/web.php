@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\RewardClaimController;
 use App\Http\Controllers\Admin\SalesTeamController;
 use App\Http\Controllers\Admin\SubcategoryController;
 use App\Http\Controllers\Admin\SubSubcategoryController;
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\ManufacturingTeamAuthController;
 use App\Http\Controllers\Auth\SalesTeamAuthController;
@@ -110,6 +111,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     
     // Admin Dashboard Route
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard')->middleware('auth:admin');
+    
+    // Activity Logs Route
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index')->middleware('auth:admin');
     
     // Category Routes
     Route::middleware('auth:admin')->group(function () {

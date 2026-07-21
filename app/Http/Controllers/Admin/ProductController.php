@@ -9,8 +9,10 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Subcategory;
 use App\Models\SubSubcategory;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -19,10 +21,42 @@ class ProductController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with(['category', 'subcategory', 'subSubcategory', 'images', 'variations'])->latest()->paginate(10);
-        return view('admin.products.index', compact('products'));
+        $query = Product::with(['category', 'subcategory', 'subSubcategory', 'images', 'variations']);
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('subcategory_id')) {
+            $query->where('subcategory_id', $request->subcategory_id);
+        }
+
+        if ($request->filled('sub_subcategory_id')) {
+            $query->where('sub_subcategory_id', $request->sub_subcategory_id);
+        }
+
+        $perPage = $request->input('per_page', 10);
+        $products = $query->latest()->paginate($perPage)->appends($request->all());
+
+        $categories = Category::all();
+        
+        // Pass subcategories and subSubcategories if a category is selected to retain dropdown state
+        $subcategories = [];
+        $subSubcategories = [];
+        if ($request->filled('category_id')) {
+            $subcategories = Subcategory::where('category_id', $request->category_id)->get();
+        }
+        if ($request->filled('subcategory_id')) {
+            $subSubcategories = SubSubcategory::where('subcategory_id', $request->subcategory_id)->get();
+        }
+
+        return view('admin.products.index', compact('products', 'categories', 'subcategories', 'subSubcategories'));
     }
 
     /**
@@ -136,8 +170,17 @@ class ProductController extends Controller
         }
     }
 
-    return redirect()->route('admin.products.index')->with('success', 'Product created successfully.');
-}
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'created',
+            'model_type' => 'Product',
+            'model_id' => $product->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $product->name]
+        ]);
+
+        return redirect()->route('admin.products.index')->with('success', 'Product created successfully.');
+    }
 
     /**
      * Show the form for editing the specified product.
@@ -239,8 +282,17 @@ class ProductController extends Controller
         }
     }
 
-    return redirect()->route('admin.products.index')->with('success', 'Product updated successfully.');
-}
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'updated',
+            'model_type' => 'Product',
+            'model_id' => $product->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $product->name]
+        ]);
+
+        return redirect()->route('admin.products.index', ['page' => $request->page])->with('success', 'Product updated successfully.');
+    }
 
     /**
      * Remove an image from a product.
@@ -409,7 +461,17 @@ class ProductController extends Controller
         $product->variations()->delete();
         $product->dealerDiscounts()->delete();
 
+        $name = $product->name;
         $product->delete();
+
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'deleted',
+            'model_type' => 'Product',
+            'model_id' => null,
+            'ip_address' => request()->ip(),
+            'details' => ['name' => $name]
+        ]);
 
         return redirect()->route('admin.products.index')->with('success', 'Product deleted successfully.');
     }

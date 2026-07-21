@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class CategoryController extends Controller
 {
@@ -73,6 +75,15 @@ class CategoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'created',
+            'model_type' => 'Category',
+            'model_id' => $category->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $category->name]
+        ]);
+
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category created successfully.');
     }
@@ -134,6 +145,15 @@ class CategoryController extends Controller
             }
         }
 
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'updated',
+            'model_type' => 'Category',
+            'model_id' => $category->id,
+            'ip_address' => $request->ip(),
+            'details' => ['name' => $category->name]
+        ]);
+
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category updated successfully.');
     }
@@ -146,7 +166,17 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
+        $name = $category->name;
         $category->delete();
+
+        ActivityLog::create([
+            'admin_id' => Auth::guard('admin')->id(),
+            'action' => 'deleted',
+            'model_type' => 'Category',
+            'model_id' => null,
+            'ip_address' => request()->ip(),
+            'details' => ['name' => $name]
+        ]);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category deleted successfully.');

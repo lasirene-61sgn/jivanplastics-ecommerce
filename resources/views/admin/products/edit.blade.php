@@ -16,6 +16,9 @@
     <form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data" class="space-y-8">
         @csrf
         @method('PUT')
+        @if(request()->has('page'))
+            <input type="hidden" name="page" value="{{ request('page') }}">
+        @endif
 
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             <h3 class="text-lg font-bold text-slate-900 mb-6">Edit Basic Information</h3>
@@ -53,7 +56,14 @@
                     <label class="text-sm font-semibold text-slate-700 mb-1 block">
                         {{ $product->images->count() > 0 ? 'Add More Images' : 'Gallery Images' }}
                     </label>
-                    <input type="file" name="images[]" multiple class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <input type="file" name="images[]" multiple accept=".jpeg,.png,.jpg,.gif,.webp" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" onchange="validateImageFiles(this)">
+                    <div id="image-error" class="text-xs text-red-500 mt-1 font-semibold hidden"></div>
+                    @error('images.*')
+                        <p class="text-xs text-red-500 mt-1 font-semibold">{{ $message }}</p>
+                    @enderror
+                    @error('images')
+                        <p class="text-xs text-red-500 mt-1 font-semibold">{{ $message }}</p>
+                    @enderror
                     <p class="text-xs text-slate-400 mt-1">New images will be added to the gallery. Existing images are kept unless individually deleted.</p>
                 </div>
             </div>
@@ -378,4 +388,25 @@
         </button>
     </form>
 </div>
+<script>
+function validateImageFiles(input) {
+    const allowedExtensions = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+    const errorDiv = document.getElementById('image-error');
+    errorDiv.classList.add('hidden');
+    errorDiv.innerText = '';
+    
+    if (input.files) {
+        for (let i = 0; i < input.files.length; i++) {
+            const fileName = input.files[i].name;
+            const ext = fileName.split('.').pop().toLowerCase();
+            if (!allowedExtensions.includes(ext)) {
+                errorDiv.innerText = 'Unsupported file format selected. Please choose JPEG, PNG, JPG, GIF, or WEBP images only.';
+                errorDiv.classList.remove('hidden');
+                input.value = ''; // clear selection
+                return;
+            }
+        }
+    }
+}
+</script>
 @endsection

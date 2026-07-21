@@ -20,11 +20,61 @@ class OrderController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with('customer', 'manufacturingTeam')->latest()->paginate(20);
-        
-        return view('admin.orders.index', compact('orders'));
+        $query = Order::with('customer', 'manufacturingTeam');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($c) use ($search) {
+                      $c->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('customer_type')) {
+            $query->where('customer_type', $request->customer_type);
+        }
+
+        if ($request->filled('status')) {
+            $status = $request->status;
+            if (in_array($status, ['pending', 'processing', 'completed', 'cancelled', 'accepted', 'rejected'])) {
+                $query->where('status', $status);
+            } elseif (in_array($status, ['allocated'])) {
+                $query->where('manufacturing_status', $status);
+            }
+        }
+
+        if ($request->filled('category_id') || $request->filled('subcategory_id') || $request->filled('sub_subcategory_id')) {
+            $query->whereHas('items.product', function($q) use ($request) {
+                if ($request->filled('category_id')) {
+                    $q->where('category_id', $request->category_id);
+                }
+                if ($request->filled('subcategory_id')) {
+                    $q->where('subcategory_id', $request->subcategory_id);
+                }
+                if ($request->filled('sub_subcategory_id')) {
+                    $q->where('sub_subcategory_id', $request->sub_subcategory_id);
+                }
+            });
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $orders = $query->latest()->paginate($perPage)->appends($request->all());
+
+        $categories = \App\Models\Category::all();
+        $subcategories = [];
+        $subSubcategories = [];
+        if ($request->filled('category_id')) {
+            $subcategories = \App\Models\Subcategory::where('category_id', $request->category_id)->get();
+        }
+        if ($request->filled('subcategory_id')) {
+            $subSubcategories = \App\Models\SubSubcategory::where('subcategory_id', $request->subcategory_id)->get();
+        }
+
+        return view('admin.orders.index', compact('orders', 'categories', 'subcategories', 'subSubcategories'));
     }
 
     /**

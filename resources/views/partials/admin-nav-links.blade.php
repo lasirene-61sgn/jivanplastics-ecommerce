@@ -16,6 +16,7 @@
         ['route' => 'admin.rewards.index', 'label' => 'Rewards', 'icon' => 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5a2 2 0 10-2 2h2'],
         ['route' => 'admin.reward-claims.index', 'label' => 'Reward Claims', 'icon' => 'M9 12l2 2 4-4'],
         ['route' => 'admin.sales-team.index', 'label' => 'Sales Team', 'icon' => 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745'],
+        ['route' => 'admin.activity-logs.index', 'label' => 'Activity Logs', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
     ];
 @endphp
 
