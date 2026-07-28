@@ -126,11 +126,17 @@ class ReturnRequestController extends Controller
 
         // Auto-generate system invoice, Return Note and deduct loyalty points if completed
         if ($request->status === 'completed' && !$returnRequest->invoice_id) {
-            $invoice = $this->generateReturnInvoice($returnRequest);
-            $noteType = $request->input('note_type', 'credit'); // Use selected type, default to credit
-            $adjustmentAmount = $request->input('adjustment_amount', 0);
-            $this->generateReturnNote($returnRequest, $noteType, $adjustmentAmount); 
-            $this->deductLoyaltyPointsForReturn($returnRequest, $invoice);
+            if ($returnRequest->order_id) {
+                $invoice = $this->generateReturnInvoice($returnRequest);
+                $noteType = $request->input('note_type', 'debit'); // Default to debit for automatic creation
+                $adjustmentAmount = $request->input('adjustment_amount', 0);
+                $this->generateReturnNote($returnRequest, $noteType, $adjustmentAmount); 
+                $this->deductLoyaltyPointsForReturn($returnRequest, $invoice);
+            } else {
+                // For Manufacturing direct returns without an order, we just complete it
+                // We could generate a debit note here if we had pricing info, but we don't.
+                $returnRequest->update(['admin_notes' => $returnRequest->admin_notes . "\n[System] Completed Manufacturing Direct Return without order pricing."]);
+            }
         }
         
         return redirect()->back()->with('success', 'Return request status updated successfully.');
@@ -289,16 +295,8 @@ class ReturnRequestController extends Controller
             return;
         }
 
-        // Calculate points originally awarded for this order
-        $originalPoints = floor($order->total / 1000);
-        if ($order->total <= 2000) $originalPoints = 0;
-
-        // Calculate points that SHOULD BE awarded after this return
-        $newTotal = max(0, $order->total - $returnInvoice->total);
-        $newPoints = floor($newTotal / 1000);
-        if ($newTotal <= 2000) $newPoints = 0;
-
-        $deduction = $originalPoints - $newPoints;
+        // Calculate 0.1% of the return invoice total
+        $deduction = max(1, floor($returnInvoice->total * 0.001));
 
         if ($deduction > 0) {
             // We use a custom deduction to allow it to go to 0 but not negative if possible, 

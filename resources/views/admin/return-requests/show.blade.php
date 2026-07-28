@@ -12,14 +12,20 @@
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
             </div>
             @php
-                $lineNum = $returnRequest->order->items->search(function($item) use ($returnRequest) {
-                    return $item->id === $returnRequest->order_item_id;
-                });
-                $lineNum = $lineNum !== false ? $lineNum + 1 : 1;
+                $lineNum = 1;
+                if ($returnRequest->order && $returnRequest->order_item_id) {
+                    $lineNum = $returnRequest->order->items->search(function($item) use ($returnRequest) {
+                        return $item->id === $returnRequest->order_item_id;
+                    });
+                    $lineNum = $lineNum !== false ? $lineNum + 1 : 1;
+                }
             @endphp
             <div>
                 <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase italic">ID: RR{{ str_pad($returnRequest->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</h2>
-                <p class="text-xs text-slate-400 font-bold tracking-widest uppercase">Post-Purchase Ticket</p>
+                @if($returnRequest->request_number)
+                    <p class="text-xs text-rose-500 font-bold tracking-widest uppercase mt-1">{{ $returnRequest->request_number }} (Mfg Direct)</p>
+                @endif
+                <p class="text-xs text-slate-400 font-bold tracking-widest uppercase mt-1">Post-Purchase Ticket</p>
             </div>
         </div>
         <a href="{{ route('admin.return-requests.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
@@ -42,9 +48,13 @@
                         </div>
                         <div>
                             <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Order Link</p>
-                            <a href="{{ route('admin.orders.show', $returnRequest->order) }}" class="text-sm font-black text-indigo-600 underline">
-                                Order #{{ $returnRequest->order->order_number }}
-                            </a>
+                            @if($returnRequest->order)
+                                <a href="{{ route('admin.orders.show', $returnRequest->order) }}" class="text-sm font-black text-indigo-600 underline">
+                                    Order #{{ $returnRequest->order->order_number }}
+                                </a>
+                            @else
+                                <span class="text-sm font-black text-slate-400 italic">No Order (Direct)</span>
+                            @endif
                         </div>
                     </div>
                     <div class="space-y-6">
@@ -70,7 +80,7 @@
                         </div>
                         @endif
                     </div>
-                    @if($returnRequest->order->manufacturingTeam)
+                    @if($returnRequest->order && $returnRequest->order->manufacturingTeam)
                     <div class="sm:col-span-2 pt-6 border-t border-slate-50">
                         <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Manufacturing Information</p>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
@@ -133,25 +143,70 @@
                     <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Product Reference</h3>
                 </div>
                 <div class="p-8 flex flex-col md:flex-row gap-8 items-start">
-                    @if($returnRequest->orderItem->product && $returnRequest->orderItem->product->images->count() > 0)
+                    @php
+                        $productImage = null;
+                        $productName = 'N/A';
+                        $productSku = 'N/A';
+                        $productPrice = null;
+                        $productModel = null;
+                        
+                        if ($returnRequest->orderItem) {
+                            $productModel = $returnRequest->orderItem->product;
+                            if ($productModel && $productModel->images->count() > 0) {
+                                $productImage = $productModel->images->first()->image_path;
+                            }
+                            $productName = $productModel ? $productModel->name : $returnRequest->orderItem->product_name;
+                            $productSku = $returnRequest->orderItem->product_sku;
+                            $productPrice = $returnRequest->orderItem->price;
+                        } elseif ($returnRequest->product) {
+                            $productModel = $returnRequest->product;
+                            if ($productModel->images->count() > 0) {
+                                $productImage = $productModel->images->first()->image_path;
+                            }
+                            $productName = $productModel->name;
+                            $productSku = $productModel->sku ?? 'N/A';
+                            $productPrice = $productModel->price;
+                        }
+                    @endphp
+                    
+                    @if($productImage)
                         <div class="w-full md:w-40 h-40 flex-shrink-0 rounded-2xl border border-slate-200 overflow-hidden shadow-inner bg-slate-50">
-                            <img src="{{ asset('storage/' . $returnRequest->orderItem->product->images->first()->image_path) }}" class="h-full w-full object-cover">
+                            <img src="{{ asset('storage/' . $productImage) }}" class="h-full w-full object-cover">
                         </div>
                     @endif
                     <div class="flex-1 space-y-4">
                         <h4 class="text-xl font-black text-slate-900 leading-tight">
-                            {{ $returnRequest->orderItem->product ? $returnRequest->orderItem->product->name : $returnRequest->orderItem->product_name }}
+                            {{ $productName }}
                         </h4>
+                        @if($productModel)
+                            <div class="flex flex-wrap gap-2 text-xs font-bold text-slate-600 uppercase tracking-widest mt-2">
+                                @if($productModel->size)
+                                    <span class="px-2 py-1 bg-slate-100 rounded-lg">Size: {{ $productModel->size }}</span>
+                                @endif
+                                @if($productModel->thickness)
+                                    <span class="px-2 py-1 bg-slate-100 rounded-lg">Thick: {{ $productModel->thickness }}</span>
+                                @endif
+                                @if($productModel->color)
+                                    <span class="px-2 py-1 bg-slate-100 rounded-lg">Color: {{ $productModel->color }}</span>
+                                @endif
+                            </div>
+                        @endif
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global SKU</p>
-                                <p class="text-sm font-mono font-bold text-slate-700 uppercase tracking-tighter">{{ $returnRequest->orderItem->product_sku }}</p>
+                                <p class="text-sm font-mono font-bold text-slate-700 uppercase tracking-tighter">{{ $productSku }}</p>
                             </div>
                             <div>
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoiced Rate</p>
-                                <p class="text-sm font-bold text-slate-900 italic">{{ number_format($returnRequest->orderItem->price, 2) }}</p>
+                                @if($productPrice !== null)
+                                    <p class="text-sm font-bold text-slate-900 italic">{{ number_format($productPrice, 2) }}</p>
+                                @else
+                                    <p class="text-sm font-bold text-slate-500 italic">N/A</p>
+                                @endif
                             </div>
                         </div>
+                        
+                        @if($returnRequest->orderItem)
                         <div class="pt-4 flex gap-4 text-center">
                             <div class="px-4 py-2 bg-slate-100 rounded-xl">
                                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Ordered</p>
@@ -162,6 +217,7 @@
                                 <p class="text-sm font-black text-slate-900">{{ $returnRequest->orderItem->dispatched_quantity }}</p>
                             </div>
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -192,7 +248,7 @@
             @if($returnRequest->status !== 'completed')
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
                 <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2">Admin Resolution</h3>
-                <!-- <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
                     @method('PUT')
                     
@@ -254,10 +310,10 @@
                     <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 transition-all active:scale-95">
                         Commit Resolution
                     </button>
-                </form> -->
+                </form>
             </div>
             @else
-                <!-- <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
+                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 italic">Dispatch Proof</h3>
@@ -296,7 +352,7 @@
                             {{ $returnRequest->admin_notes ?? 'No internal audit notes were archived for this request.' }}
                         </div>
                     </div>
-                </div> -->
+                </div>
             @endif
         </div>
     </div>

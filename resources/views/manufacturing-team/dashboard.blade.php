@@ -217,6 +217,13 @@
                     </div>
 
                     @if($tab === 'returns')
+                        <div class="px-8 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
+                            <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest">Return Requests Directory</h4>
+                            <a href="{{ route('manufacturing-team.returns.create') }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Create Request
+                            </a>
+                        </div>
                         @if($returnRequests->count() > 0)
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left">
@@ -234,13 +241,26 @@
                                         <tr class="group hover:bg-slate-50/50 transition-colors">
                                             <td class="py-6 px-8">
                                                 <div class="flex flex-col">
-                                                    <span class="text-sm font-black text-slate-900 tracking-tight">#{{ $return->order->order_number }}</span>
-                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $return->created_at->format('d M, Y') }}</span>
+                                                    @if($return->order)
+                                                        <span class="text-sm font-black text-slate-900 tracking-tight">#{{ $return->order->order_number }}</span>
+                                                    @elseif($return->request_number)
+                                                        <span class="text-sm font-black text-rose-600 tracking-tight">{{ $return->request_number }}</span>
+                                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Mfg Direct</span>
+                                                    @else
+                                                        <span class="text-sm font-black text-slate-500 tracking-tight italic">Direct</span>
+                                                    @endif
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{{ $return->created_at->format('d M, Y') }}</span>
                                                 </div>
                                             </td>
                                             <td class="py-6 px-4">
                                                 <div class="flex flex-col">
-                                                    <span class="text-sm font-black text-slate-900 tracking-tight">{{ $return->orderItem->product_name }}</span>
+                                                    @if($return->orderItem)
+                                                        <span class="text-sm font-black text-slate-900 tracking-tight">{{ $return->orderItem->product_name }}</span>
+                                                    @elseif($return->product)
+                                                        <span class="text-sm font-black text-slate-900 tracking-tight">{{ $return->product->name }}</span>
+                                                    @else
+                                                        <span class="text-sm font-black text-slate-500 tracking-tight">N/A</span>
+                                                    @endif
                                                 </div>
                                             </td>
                                             <td class="py-6 px-4">

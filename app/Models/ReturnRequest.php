@@ -10,6 +10,9 @@ class ReturnRequest extends Model
     use HasFactory;
     
     protected $fillable = [
+        'request_number',
+        'manufacturing_team_id',
+        'product_id',
         'invoice_id',
         'order_id',
         'order_item_id',
@@ -40,6 +43,11 @@ class ReturnRequest extends Model
     public function orderItem()
     {
         return $this->belongsTo(OrderItem::class);
+    }
+    
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
     }
     
     public function customer()

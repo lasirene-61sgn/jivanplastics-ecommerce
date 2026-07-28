@@ -167,6 +167,24 @@
             left: 100%;
             top: 0;
             margin-left: 0.25rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Custom Scrollbar for Dropdown Submenu */
+        .dropdown-submenu::-webkit-scrollbar {
+            width: 6px;
+        }
+        .dropdown-submenu::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 10px;
+        }
+        .dropdown-submenu::-webkit-scrollbar-thumb {
+            background: rgba(227, 30, 36, 0.3);
+            border-radius: 10px;
+        }
+        .dropdown-submenu::-webkit-scrollbar-thumb:hover {
+            background: rgba(227, 30, 36, 0.6);
         }
 
         /* Responsive Sidebar (Mobile Only) */
@@ -397,9 +415,43 @@
                     </svg></button>
             </div>
 
-            <div class="space-y-2">
+            <div class="space-y-2" style="max-height: 80vh; overflow-y: auto;">
                 <a href="{{ route('b2b.dashboard') }}" class="dropdown-item font-bold py-4">Dashboard</a>
-                <a href="{{ route('b2b.products') }}" class="dropdown-item font-bold py-4 text-red-600 italic">View All Products</a>
+                
+                <div x-data="{ expanded: false }" class="w-full">
+                    <button @click="expanded = !expanded" class="dropdown-item font-bold py-4 w-full flex justify-between items-center text-left">
+                        Products
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    
+                    <div x-show="expanded" style="display: none;" class="pl-4 pr-2 space-y-1 pb-2">
+                        <a href="{{ route('b2b.products') }}" class="dropdown-item py-2 text-sm font-bold text-red-600 italic">View All Products</a>
+                        @foreach($navCategories as $category)
+                            <div x-data="{ subExpanded: false }" class="w-full">
+                                <button @click="subExpanded = !subExpanded" class="dropdown-item py-2 w-full flex justify-between items-center text-left text-sm font-medium">
+                                    {{ $category->name }}
+                                    @if($category->subcategories->count() > 0)
+                                    <svg class="w-4 h-4 transition-transform duration-200" :class="subExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                    @endif
+                                </button>
+                                
+                                @if($category->subcategories->count() > 0)
+                                <div x-show="subExpanded" style="display: none;" class="pl-4 space-y-1 bg-slate-50 rounded-lg py-1 mt-1">
+                                    <a href="{{ route('b2b.products', ['category' => $category->id]) }}" class="dropdown-item py-1.5 text-xs font-semibold italic text-slate-600">All {{ $category->name }}</a>
+                                    @foreach($category->subcategories as $sub)
+                                        <a href="{{ route('b2b.products', ['category' => $category->id, 'subcategory' => $sub->id]) }}" class="dropdown-item py-1.5 text-xs text-slate-500">{{ $sub->name }}</a>
+                                    @endforeach
+                                </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
                 <a href="{{ route('b2b.discounts.index') }}" class="dropdown-item font-bold py-4">Discounts</a>
                 <a href="{{ route('b2b.orders') }}" class="dropdown-item font-bold py-4">Orders</a>
                 <a href="{{ route('b2b.rewards.index') }}" class="dropdown-item font-bold py-4">Rewards</a>

@@ -21,20 +21,30 @@ class ManufacturingTeamAuthController extends Controller
     /**
      * Handle sending OTP for manufacturing team login.
      */
-    public function sendOtp(Request $request)
+    public function checkPhone(Request $request)
     {
         $request->validate([
             'phone' => 'required|numeric',
         ]);
 
-        $manufacturingTeam = ManufacturingTeam::where('phone', $request->phone)->first();
+        $team = ManufacturingTeam::where('phone', $request->phone)->first();
 
-        if (!$manufacturingTeam) {
+        if (!$team) {
             return response()->json(['success' => false, 'message' => 'No account found with this mobile number.']);
         }
 
-        if (!$manufacturingTeam->is_active) {
+        if (!$team->is_active) {
             return response()->json(['success' => false, 'message' => 'Your account is currently inactive.']);
+        }
+
+        $hasPassword = !empty($team->password);
+
+        if($hasPassword){
+            return response()->json([
+                'success'    =>  true,
+                'has_password' => true,
+                'message'    => 'Set the password'
+            ]);
         }
 
         // Generate OTP
@@ -58,11 +68,12 @@ class ManufacturingTeamAuthController extends Controller
     /**
      * Handle verifying OTP and logging in.
      */
-    public function verifyOtp(Request $request)
+    public function verifyOtpAndSetPassword(Request $request)
     {
         $request->validate([
             'phone' => 'required|numeric',
             'otp' => 'required|numeric',
+            'password' => 'required|min:6|confirmed'
         ]);
 
         $sessionOtp = $request->session()->get('manufacturing_login_otp');
@@ -72,15 +83,19 @@ class ManufacturingTeamAuthController extends Controller
             return response()->json(['success' => false, 'message' => 'Invalid OTP or Mobile Number.']);
         }
 
-        $manufacturingTeam = ManufacturingTeam::where('phone', $request->phone)->first();
+        $team = ManufacturingTeam::where('phone', $request->phone)->first();
 
-        if ($manufacturingTeam) {
-            // Log in the manufacturing team
-            Auth::guard('manufacturing-team')->login($manufacturingTeam);
+        if ($team) {
+            $team->password = Hash::make($request->password);
+            $team->save();
+           
             
             // Clear session data
             $request->session()->forget('manufacturing_login_otp');
             $request->session()->forget('manufacturing_login_phone');
+
+             // Log in the manufacturing team
+            Auth::guard('manufacturing-team')->login($team);
 
             return response()->json([
                 'success' => true, 
@@ -89,6 +104,29 @@ class ManufacturingTeamAuthController extends Controller
         }
 
         return response()->json(['success' => false, 'message' => 'Account not found.']);
+    }
+
+    public function loginWithPassword(Request $request){
+        $request->validate([
+            'phone' => 'required|numeric',
+            'password' => 'required',
+        ]);
+
+        $team =ManufacturingTeam::where('phone', $request->phone)->first();
+
+        if(!$team || Hash::check($request->password, $team->password)){
+            return response()->json(['success' => false, 'message' => 'Enter the correct number or password']);
+        }
+
+        if(!$team->is_active){
+            return response()->json(['success' => false, 'messsage' => 'Your account is not their contact Admin']);
+        }
+
+        Auth::guard('manufacturing-team')->login($team);
+        return response()->json([
+            'success' => true, 
+            'redirect' => route('manufacturing-team.dashboard')
+        ]);
     }
 
     /**

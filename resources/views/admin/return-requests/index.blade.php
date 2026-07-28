@@ -32,16 +32,25 @@
                             <tr class="hover:bg-slate-50/30 transition-colors group">
                                 <td class="px-6 py-4">
                                     @php
-                                        $lineNum = $request->order->items->search(function($item) use ($request) {
-                                            return $item->id === $request->order_item_id;
-                                        });
-                                        $lineNum = $lineNum !== false ? $lineNum + 1 : 1;
+                                        $lineNum = 1;
+                                        if ($request->order && $request->order_item_id) {
+                                            $lineNum = $request->order->items->search(function($item) use ($request) {
+                                                return $item->id === $request->order_item_id;
+                                            }) + 1;
+                                        }
                                     @endphp
-                                    <div class="text-sm font-black text-rose-600">RR{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</div>
-                                    <div class="text-xs font-black text-slate-900 mt-0.5">Ord: #{{ $request->order->order_number }}</div>
+                                    <span class="text-sm font-black text-slate-800">RR{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</span>
+                                    @if($request->request_number)
+                                        <div class="text-xs font-bold text-slate-500">{{ $request->request_number }}</div>
+                                    @endif
+                                    @if($request->order)
+                                        <div class="text-xs font-black text-slate-900 mt-0.5">Ord: #{{ $request->order->order_number }}</div>
+                                    @else
+                                        <div class="text-[10px] font-bold text-rose-500 uppercase mt-1 tracking-widest bg-rose-50 px-2 py-0.5 rounded inline-block border border-rose-100">Mfg Direct</div>
+                                    @endif
                                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{{ $request->created_at->format('d M, Y') }}</div>
                                     
-                                    @if($request->order->manufacturingTeam)
+                                    @if($request->order && $request->order->manufacturingTeam)
                                     <div class="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
                                         <div class="text-[10px] font-black text-slate-700 uppercase tracking-widest">{{ $request->order->manufacturingTeam->factory_name }}</div>
                                         <div class="flex flex-col mt-1 space-y-0.5">
@@ -53,14 +62,42 @@
                                 </td>
 
                                 <td class="px-6 py-4">
-                                    <div class="text-sm font-bold text-slate-800">{{ $request->customer->name }}</div>
-                                    <div class="text-xs text-indigo-600 font-medium truncate max-w-[180px]">
-                                        {{ $request->orderItem->product ? $request->orderItem->product->name : $request->orderItem->product_name }}
+                                    <div class="text-sm font-bold text-slate-800">{{ $request->customer->name }} <span class="text-[10px] text-slate-500 uppercase">({{ $request->customer->customer_type }})</span></div>
+                                    <div class="text-xs text-slate-500 mb-1"><i class="fas fa-phone-alt text-[10px] mr-1"></i>{{ $request->customer->phone }}</div>
+                                    @php
+                                        $productModel = null;
+                                        $productName = 'N/A';
+                                        if ($request->orderItem) {
+                                            $productModel = $request->orderItem->product;
+                                            $productName = $productModel ? $productModel->name : $request->orderItem->product_name;
+                                        } elseif ($request->product) {
+                                            $productModel = $request->product;
+                                            $productName = $productModel->name;
+                                        }
+                                    @endphp
+                                    <div class="text-xs text-indigo-600 font-bold truncate max-w-[180px]">
+                                        {{ $productName }}
                                     </div>
+                                    @if($productModel)
+                                        <div class="mt-1 flex flex-wrap gap-1 text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
+                                            @if($productModel->size)
+                                                <span class="px-1.5 py-0.5 bg-slate-100 rounded">S: {{ $productModel->size }}</span>
+                                            @endif
+                                            @if($productModel->thickness)
+                                                <span class="px-1.5 py-0.5 bg-slate-100 rounded">T: {{ $productModel->thickness }}</span>
+                                            @endif
+                                            @if($productModel->color)
+                                                <span class="px-1.5 py-0.5 bg-slate-100 rounded">C: {{ $productModel->color }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td class="px-6 py-4 text-center">
                                     <div class="text-sm font-black text-slate-900">{{ $request->quantity }} units</div>
+                                    @if($request->pieces > 0)
+                                        <div class="text-sm font-black text-slate-900 mt-1">{{ $request->pieces }} pieces</div>
+                                    @endif
                                     <span class="text-[9px] font-black uppercase tracking-tighter text-slate-400 italic">{{ $request->type }}</span>
                                 </td>
 

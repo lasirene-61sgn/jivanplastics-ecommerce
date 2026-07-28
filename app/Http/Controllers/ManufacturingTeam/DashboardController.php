@@ -38,15 +38,21 @@ class DashboardController extends Controller
         $orders = $query->latest()->paginate(20);
         $orders->appends(['tab' => $tab]);
 
-        $returnRequestsCount = \App\Models\ReturnRequest::whereHas('order', function($q) use ($manufacturingTeam) {
-            $q->where('manufacturing_team_id', $manufacturingTeam->id);
+        $returnRequestsCount = \App\Models\ReturnRequest::where(function($q) use ($manufacturingTeam) {
+            $q->where('manufacturing_team_id', $manufacturingTeam->id)
+              ->orWhereHas('order', function($q2) use ($manufacturingTeam) {
+                  $q2->where('manufacturing_team_id', $manufacturingTeam->id);
+              });
         })->count();
         
         $returnRequests = null;
         if ($tab === 'returns') {
-            $returnRequests = \App\Models\ReturnRequest::with(['order', 'orderItem.product'])
-                ->whereHas('order', function($q) use ($manufacturingTeam) {
-                    $q->where('manufacturing_team_id', $manufacturingTeam->id);
+            $returnRequests = \App\Models\ReturnRequest::with(['order', 'orderItem.product', 'product'])
+                ->where(function($q) use ($manufacturingTeam) {
+                    $q->where('manufacturing_team_id', $manufacturingTeam->id)
+                      ->orWhereHas('order', function($q2) use ($manufacturingTeam) {
+                          $q2->where('manufacturing_team_id', $manufacturingTeam->id);
+                      });
                 })
                 ->latest()
                 ->paginate(20);
@@ -463,5 +469,69 @@ class DashboardController extends Controller
         $returnRequest->update($updateData);
 
         return redirect()->back()->with('success', 'Return request status updated to ' . ucfirst($request->status) . '.');
+    }
+
+    /**
+     * Show the form for creating a new return request.
+     */
+    public function createReturnRequest()
+    {
+        $manufacturingTeam = \Illuminate\Support\Facades\Auth::guard('manufacturing-team')->user();
+        $customers = \App\Models\Customer::orderBy('name')->get(['id', 'name', 'phone', 'customer_type']);
+        $products = \App\Models\Product::orderBy('name')->get(['id', 'name']);
+        return view('manufacturing-team.return-requests.create', compact('customers', 'products', 'manufacturingTeam'));
+    }
+
+    /**
+     * Store a newly created return request in storage.
+     */
+    public function storeReturnRequest(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'items' => 'required|array',
+            'items.*.selected' => 'nullable',
+            'items.*.product_id' => 'required_with:items.*.selected|exists:products,id',
+            'reason' => 'required|string',
+            'description' => 'nullable|string',
+        ]);
+
+        $createdCount = 0;
+
+        foreach ($request->items as $item) {
+            if (!isset($item['selected']) || $item['selected'] != 1) {
+                continue;
+            }
+            
+            $quantity = isset($item['quantity']) && $item['quantity'] !== '' ? (int)$item['quantity'] : 0;
+            $pieces = isset($item['pieces']) && $item['pieces'] !== '' ? (int)$item['pieces'] : 0;
+
+            if ($quantity <= 0 && $pieces <= 0) {
+                continue;
+            }
+
+            $requestNumber = 'REQ-' . strtoupper(\Illuminate\Support\Str::random(8));
+
+            \App\Models\ReturnRequest::create([
+                'request_number' => $requestNumber,
+                'manufacturing_team_id' => \Illuminate\Support\Facades\Auth::guard('manufacturing-team')->id(),
+                'product_id' => $item['product_id'],
+                'customer_id' => $request->customer_id,
+                'reason' => $request->reason,
+                'description' => $request->description ?? '',
+                'type' => 'return',
+                'quantity' => $quantity,
+                'pieces' => $pieces,
+                'status' => 'pending'
+            ]);
+            
+            $createdCount++;
+        }
+
+        if ($createdCount === 0) {
+            return redirect()->back()->with('error', 'Please provide valid return quantities or pieces for the selected products.');
+        }
+
+        return redirect()->route('manufacturing-team.dashboard', ['tab' => 'returns'])->with('success', 'Return request created successfully.');
     }
 }

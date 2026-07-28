@@ -228,9 +228,13 @@ Route::prefix('sales-team')->name('sales-team.')->group(function () {
 // Manufacturing Team Routes
 Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function () {
     // Manufacturing Team Login Routes
-    Route::get('/login', [ManufacturingTeamAuthController::class, 'showLoginForm'])->name('login')->middleware('manufacturing-team.guest');
-    Route::post('/send-otp', [ManufacturingTeamAuthController::class, 'sendOtp'])->name('send-otp')->middleware('manufacturing-team.guest');
-    Route::post('/verify-otp', [ManufacturingTeamAuthController::class, 'verifyOtp'])->name('verify-otp')->middleware('manufacturing-team.guest');
+   Route::get('/login', [ManufacturingTeamAuthController::class, 'showLoginForm'])->name('login');
+    
+    // Auth steps
+    Route::post('/check-phone', [ManufacturingTeamAuthController::class, 'checkPhone'])->name('check-phone');
+    Route::post('/login-password', [ManufacturingTeamAuthController::class, 'loginWithPassword'])->name('login-password');
+    Route::post('/verify-otp-password', [ManufacturingTeamAuthController::class, 'verifyOtpAndSetPassword'])->name('verify-otp-password');
+    
     Route::post('/logout', [ManufacturingTeamAuthController::class, 'logout'])->name('logout');
     
     // Manufacturing Team Dashboard Route
@@ -248,6 +252,10 @@ Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function
         Route::put('/orders/{order}/submit-correction', [DashboardController::class, 'submitCorrectedPieces'])->name('orders.submit-correction');
         
         // Return requests
+        Route::get('/returns/create', [DashboardController::class, 'createReturnRequest'])->name('returns.create');
+        Route::post('/returns', [DashboardController::class, 'storeReturnRequest'])->name('returns.store');
+        Route::get('/returns/customer-orders', [DashboardController::class, 'getCustomerOrders'])->name('returns.customer-orders');
+        Route::get('/returns/order-products', [DashboardController::class, 'getOrderProducts'])->name('returns.order-products');
         Route::put('/returns/{returnRequest}/status', [DashboardController::class, 'updateReturnStatus'])->name('returns.status');
     });
 });
