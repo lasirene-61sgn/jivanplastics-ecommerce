@@ -232,7 +232,7 @@
                                             <th class="py-5 px-8 font-black">Order Ref</th>
                                             <th class="py-5 px-4 font-black">Product</th>
                                             <th class="py-5 px-4 font-black">Qty / Pieces</th>
-                                            <th class="py-5 px-4 font-black text-center">Status</th>
+                                            <!-- <th class="py-5 px-4 font-black text-center">Status</th> -->
                                             <!-- <th class="py-5 px-8 text-right font-black">Actions</th> -->
                                         </tr>
                                     </thead>
@@ -266,7 +266,7 @@
                                             <td class="py-6 px-4">
                                                 <span class="text-xs font-black text-slate-700 tracking-tight">{{ $return->quantity }} units / {{ $return->pieces }} pcs</span>
                                             </td>
-                                            <td class="py-6 px-4 text-center">
+                                            <!-- <td class="py-6 px-4 text-center">
                                                 @php
                                                 $statusColors = [
                                                 'pending' => 'bg-amber-50 text-amber-600 border-amber-100',
@@ -279,7 +279,7 @@
                                                 <span class="px-3 py-1 rounded-lg border {{ $colorClass }} text-[10px] font-black uppercase tracking-widest">
                                                     {{ $return->status }}
                                                 </span>
-                                            </td>
+                                            </td> -->
                                             <!-- <td class="py-6 px-8 text-right">
                                                 @if($return->status == 'pending' || $return->status == 'processing')
                                                 <form action="{{ route('manufacturing-team.returns.status', $return) }}" method="POST" class="inline-flex items-center gap-2">

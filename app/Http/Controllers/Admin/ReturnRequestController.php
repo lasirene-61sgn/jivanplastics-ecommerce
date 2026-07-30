@@ -410,6 +410,8 @@ class ReturnRequestController extends Controller
             $customer->loyalty_points = max(0, $customer->loyalty_points - $deduction);
             $customer->save();
             
+            // Store deducted points on the return request record
+            $returnRequest->points_deducted = $deduction;
             // Log in admin notes
             $returnRequest->admin_notes .= "\n[System] Deducted {$deduction} loyalty points from customer.";
             $returnRequest->save();
@@ -425,7 +427,7 @@ class ReturnRequestController extends Controller
      */
     public function showReturnNote(ReturnRequest $returnRequest, ReturnNote $returnNote)
     {
-        $returnNote->load(['items.orderItem.product', 'order.customer', 'returnRequest']);
+        $returnNote->load(['items.orderItem.product', 'order.customer', 'returnRequest.customer']);
         
         return view('admin.return-requests.return-note', compact('returnRequest', 'returnNote'));
     }

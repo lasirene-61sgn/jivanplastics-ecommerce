@@ -246,21 +246,158 @@
             </div>
 
             @if($returnRequest->status !== 'completed')
+            @php
+                // Pre-calculate expected debit note total (mirrors controller logic)
+                $rr = $returnRequest;
+                $rrOrderItem = $rr->orderItem;
+                $rrProduct = $rrOrderItem ? $rrOrderItem->product : $rr->product;
+                $rrQty = $rr->quantity;
+                $rrPcs = $rr->pieces ?? 0;
+
+                if ($rrOrderItem && $rrProduct) {
+                    $rrUnitPrice    = $rrOrderItem->price;
+                    $rrPqp          = $rrProduct->per_quantity_pieces > 0 ? $rrProduct->per_quantity_pieces : 1;
+                    $rrPiecePrice   = $rrProduct->piece_price ?? ($rrUnitPrice / $rrPqp);
+                    if (($rr->order && $rr->order->customer_type === 'dealer') || $rrPiecePrice <= 0) {
+                        $rrPiecePrice = $rrUnitPrice / $rrPqp;
+                    }
+                    $rrUnitTax      = ($rrOrderItem->quantity > 0) ? ($rrOrderItem->tax / $rrOrderItem->quantity) : 0;
+                    $rrPieceTax     = $rrUnitTax / $rrPqp;
+                    $rrUnitDisc     = ($rrOrderItem->quantity > 0) ? (($rrOrderItem->discount_amount ?? 0) / $rrOrderItem->quantity) : 0;
+                    $rrPieceDisc    = $rrUnitDisc / $rrPqp;
+                } elseif ($rrProduct) {
+                    $rrUnitPrice  = $rrProduct->price ?? 0;
+                    $rrPqp        = $rrProduct->per_quantity_pieces > 0 ? $rrProduct->per_quantity_pieces : 1;
+                    $rrPiecePrice = $rrProduct->piece_price ?? ($rrUnitPrice / $rrPqp);
+                    if ($rrPiecePrice <= 0) { $rrPiecePrice = $rrUnitPrice / $rrPqp; }
+                    $rrUnitTax = $rrPieceTax = $rrUnitDisc = $rrPieceDisc = 0;
+                } else {
+                    $rrUnitPrice = $rrPiecePrice = $rrUnitTax = $rrPieceTax = $rrUnitDisc = $rrPieceDisc = 0;
+                }
+
+                $rrSubtotal  = ($rrUnitPrice * $rrQty) + ($rrPiecePrice * $rrPcs);
+                $rrTax       = ($rrUnitTax * $rrQty) + ($rrPieceTax * $rrPcs);
+                $rrDiscount  = ($rrUnitDisc * $rrQty) + ($rrPieceDisc * $rrPcs);
+                $rrTotal     = $rrSubtotal + $rrTax - $rrDiscount;
+                $rrIsZero    = $rrTotal <= 0;
+            @endphp
+
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
                 <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2">Admin Resolution</h3>
-                <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" class="space-y-6">
+
+                {{-- Zero amount preview warning --}}
+                @if($rrIsZero)
+                <div class="mb-5 p-4 bg-amber-50 border border-amber-300 rounded-2xl flex items-start gap-3">
+                    <div class="w-8 h-8 flex-shrink-0 rounded-xl bg-amber-200 text-amber-700 flex items-center justify-center mt-0.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-black text-amber-800 uppercase tracking-widest">Debit Note Will Be ₹0.00</p>
+                        <p class="text-xs text-amber-700 mt-1 font-medium">No price data found for this product/order item. The debit note total will be <strong>₹0</strong>. No loyalty points will be deducted.</p>
+                    </div>
+                </div>
+                @else
+                <div class="mb-5 p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimated Debit Note</p>
+                        <p class="text-[10px] text-slate-400 font-medium mt-0.5">Based on order item price × quantity</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xl font-black text-slate-900">₹{{ number_format($rrTotal, 2) }}</span>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Dealer zero-points notice --}}
+                @if($returnRequest->customer && $returnRequest->customer->customer_type === 'dealer' && $returnRequest->customer->loyalty_points <= 0)
+                <div class="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3">
+                    <div class="w-8 h-8 flex-shrink-0 rounded-xl bg-blue-200 text-blue-700 flex items-center justify-center mt-0.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <!-- <p class="text-[11px] font-black text-blue-800 uppercase tracking-widest">Customer Has 0 Loyalty Points</p> -->
+                        <p class="text-xs text-blue-700 mt-1 font-medium">
+                            <strong></strong> Currently has <strong>0 pts</strong>.
+                            
+                        </p>
+                    </div>
+                </div>
+                @endif
+
+                <form id="approveForm" action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" class="space-y-6">
                     @csrf
                     @method('PUT')
-                    
                     <input type="hidden" name="status" value="completed">
                     <input type="hidden" name="note_type" value="debit">
                     <input type="hidden" name="adjustment_amount" value="0">
 
-                    <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-100 transition-all active:scale-95">
-                        Approve Request
-                    </button>
+                    @php
+                        $dealerZeroPoints = $returnRequest->customer
+                            && $returnRequest->customer->customer_type === 'dealer'
+                            && $returnRequest->customer->loyalty_points <= 0;
+                    @endphp
+
+                    @if($dealerZeroPoints)
+                        {{-- Blocked: dealer has 0 points --}}
+                        <div class="w-full py-3 px-4 bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-1 cursor-not-allowed">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Cannot Approve</span>
+                            <span class="text-[10px] text-slate-400 font-medium text-center">
+                                Customer <strong>{{ $returnRequest->customer->name }}</strong> has <strong>0 loyalty points</strong>.<br>
+                                Approval requires the customer to have points available to deduct.
+                            </span>
+                        </div>
+                    @elseif($rrIsZero)
+                        <button type="button" onclick="document.getElementById('zeroConfirmModal').classList.remove('hidden')"
+                            class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-100 transition-all active:scale-95">
+                            Approve Request
+                        </button>
+                    @else
+                        <button type="submit"
+                            class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-100 transition-all active:scale-95">
+                            Approve Request
+                        </button>
+                    @endif
                 </form>
             </div>
+
+            {{-- Zero Total Confirmation Modal --}}
+            @if($rrIsZero)
+            <div id="zeroConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+                <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-amber-200 animate-fade-in">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter">Debit Note is ₹0</h4>
+                            <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-0.5">Confirmation Required</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-600 font-medium leading-relaxed mb-2">
+                        The calculated debit note total for this return request is <strong class="text-rose-600">₹0.00</strong>.
+                    </p>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed mb-8">
+                        This usually means no price data is available for the product or order item. No loyalty points will be deducted. Do you still want to approve?
+                    </p>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="document.getElementById('zeroConfirmModal').classList.add('hidden')"
+                            class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="document.getElementById('approveForm').submit()"
+                            class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95">
+                            Yes, Approve Anyway
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @endif
             @else
                 <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
                     @if($returnRequest->returnNote)
@@ -272,6 +409,37 @@
                         <div class="text-right flex flex-col items-end">
                             <span class="text-lg font-black text-slate-900 block">₹{{ number_format($returnRequest->returnNote->total, 2) }}</span>
                             <a href="{{ route('admin.return-requests.return-note', [$returnRequest, $returnRequest->returnNote]) }}" target="_blank" class="text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors mt-1 block">View Full Note <i class="fas fa-external-link-alt ml-1 text-[9px]"></i></a>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Loyalty Points Deduction Card --}}
+                    @if($returnRequest->customer && $returnRequest->customer->customer_type === 'dealer')
+                    <div class="p-5 rounded-2xl border flex items-center justify-between shadow-sm
+                        {{ $returnRequest->points_deducted ? 'bg-rose-50 border-rose-200' : 'bg-slate-100 border-slate-200' }}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center
+                                {{ $returnRequest->points_deducted ? 'bg-rose-200 text-rose-700' : 'bg-slate-200 text-slate-500' }}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-black uppercase tracking-widest block
+                                    {{ $returnRequest->points_deducted ? 'text-rose-700' : 'text-slate-500' }}">
+                                    Loyalty Points Deducted
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-medium block mt-0.5">0.1% of debit note value</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            @if($returnRequest->points_deducted)
+                                <span class="text-2xl font-black text-rose-600 block">-{{ number_format($returnRequest->points_deducted) }}</span>
+                                <span class="text-[10px] font-bold text-rose-400 uppercase tracking-widest block">pts removed</span>
+                            @else
+                                <span class="text-sm font-black text-slate-400 block">N/A</span>
+                                <span class="text-[10px] font-medium text-slate-300 block">not applicable</span>
+                            @endif
                         </div>
                     </div>
                     @endif

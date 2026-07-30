@@ -25,11 +25,11 @@
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</label>
                 <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none focus:border-indigo-500">
                     <option value="">All Statuses</option>
-                    <option value="pending" {{ $status === 'pending' ? 'selected' : '' }}>Pending Audit</option>
-                    <option value="approved" {{ $status === 'approved' ? 'selected' : '' }}>Approved</option>
-                    <option value="processing" {{ $status === 'processing' ? 'selected' : '' }}>In-Processing</option>
-                    <option value="completed" {{ $status === 'completed' ? 'selected' : '' }}>Completed/Closed</option>
-                    <option value="rejected" {{ $status === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                    <option value="pending" {{ $status === 'pending' ? 'selected' : '' }}>Pending</option>
+                    <!-- <option value="approved" {{ $status === 'approved' ? 'selected' : '' }}>Approved</option> -->
+                    <!-- <option value="processing" {{ $status === 'processing' ? 'selected' : '' }}>In-Processing</option> -->
+                    <option value="completed" {{ $status === 'completed' ? 'selected' : '' }}>Approved</option>
+                    <!-- <option value="rejected" {{ $status === 'rejected' ? 'selected' : '' }}>Rejected</option> -->
                 </select>
             </div>
 
@@ -60,7 +60,7 @@
         <input type="hidden" name="action" id="bulk-action-type" value="">
 
         <!-- Bulk Controls Panel -->
-        <div id="bulk-controls" class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-4 hidden">
+        <!-- <div id="bulk-controls" class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-4 hidden">
             <div class="flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
                 <span class="text-xs font-black text-indigo-900 uppercase tracking-widest" id="selected-count-label">0 items selected</span>
@@ -77,7 +77,7 @@
                     Bulk Reject
                 </button>
             </div>
-        </div>
+        </div> -->
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
             @if($returnRequests->count() > 0)
@@ -85,9 +85,9 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50/50 border-b border-slate-200">
-                                <th class="py-4 pl-6 pr-2 w-10 text-center">
+                                <!-- <th class="py-4 pl-6 pr-2 w-10 text-center">
                                     <input type="checkbox" id="select-all-checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4">
-                                </th>
+                                </th> -->
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Order Info</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Customer & Product</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Qty / Type</th>
@@ -99,13 +99,13 @@
                         <tbody class="divide-y divide-slate-100">
                             @foreach($returnRequests as $request)
                                 <tr class="hover:bg-slate-50/30 transition-colors group">
-                                    <td class="py-4 pl-6 pr-2 text-center">
+                                    <!-- <td class="py-4 pl-6 pr-2 text-center">
                                         @if($request->status !== 'completed' && $request->status !== 'rejected')
                                             <input type="checkbox" name="selected_ids[]" value="{{ $request->id }}" class="return-request-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4">
                                         @else
                                             <span class="inline-block w-4 h-4"></span>
                                         @endif
-                                    </td>
+                                    </td> -->
                                     <td class="px-6 py-4">
                                         @php
                                             $lineNum = 1;

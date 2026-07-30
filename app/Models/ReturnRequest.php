@@ -28,7 +28,8 @@ class ReturnRequest extends Model
         'dispatch_proof_image',
         'invoice_proof_image',
         'admin_notes',
-        'resolved_at'
+        'resolved_at',
+        'points_deducted'
     ];
     
     protected $casts = [

@@ -39,7 +39,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-10 p-8 sm:p-10 bg-white border-b border-slate-100">
-        <div class="space-y-4">
+        <!-- <div class="space-y-4">
             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 pb-2">Billing Details</h4>
             @if($displayOrder)
             <address class="not-italic text-sm leading-relaxed text-slate-600 font-medium">
@@ -54,7 +54,7 @@
                 N/A (Manufacturing Direct Return)<br>
             </address>
             @endif
-        </div>
+        </div> -->
 
         <div class="space-y-4">
             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 pb-2">Reference Info</h4>
@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <div class="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+        <!-- <div class="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-100">
             <h4 class="text-[10px] font-black text-{{ $typeColor }}-500 uppercase tracking-[0.2em] mb-4 text-center">Issued To</h4>
             <div class="space-y-3">
                 @if($customer)
@@ -88,7 +88,7 @@
                 </div>
                 @endif
             </div>
-        </div>
+        </div> -->
     </div>
 
     <div class="p-8 sm:p-10">
@@ -100,7 +100,7 @@
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Product Description</th>
                         <!-- <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">Rate</th> -->
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">Returned Qty</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right whitespace-nowrap">Line Total</th>
+                        <!-- <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right whitespace-nowrap">Line Total</th> -->
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -145,9 +145,9 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-6 py-5 text-right">
+                            <!-- <td class="px-6 py-5 text-right">
                                 <span class="text-sm font-black text-slate-900 whitespace-nowrap italic">₹{{ number_format($item->total, 2) }}</span>
-                            </td>
+                            </td> -->
                         </tr>
                     @endforeach
                 </tbody>
@@ -157,7 +157,7 @@
 
     <div class="px-8 sm:p-10 bg-slate-50/50 border-t border-slate-100 flex flex-col items-end">
         <div class="w-full sm:w-80 space-y-4 py-4">
-            <div class="flex justify-between items-center text-sm">
+            <!-- <div class="flex justify-between items-center text-sm">
                 <span class="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Subtotal</span>
                 <span class="font-bold text-slate-700 italic">₹{{ number_format($returnNote->subtotal, 2) }}</span>
             </div>
@@ -191,7 +191,33 @@
                         ₹{{ number_format($returnNote->total, 2) }}
                     </span>
                 </div>
+            </div> -->
             </div>
+
+            @php
+                $noteReturnRequest = $returnNote->returnRequest ?? null;
+                $noteCustomer = $noteReturnRequest ? $noteReturnRequest->customer : null;
+                $pointsDeducted = $noteReturnRequest ? $noteReturnRequest->points_deducted : null;
+            @endphp
+            @if($noteCustomer && $noteCustomer->customer_type === 'dealer' && $pointsDeducted)
+            <div class="mt-6 p-4 bg-rose-50 rounded-2xl border border-rose-200 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-rose-200 text-rose-700 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-black text-rose-700 uppercase tracking-widest block">Loyalty Points Deducted</span>
+                        <span class="text-[10px] text-rose-400 font-medium block">0.1% of debit note value · Dealer account</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xl font-black text-rose-700 block">-{{ number_format($pointsDeducted) }}</span>
+                    <span class="text-[10px] font-bold text-rose-400 uppercase tracking-widest block">pts removed</span>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>

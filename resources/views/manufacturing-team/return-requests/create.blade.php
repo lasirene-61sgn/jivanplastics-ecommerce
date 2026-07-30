@@ -175,9 +175,9 @@
 
             <div class="p-8 border-b border-slate-50">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight">Products to Return</h3>
-                    <button type="button" id="addProductBtn" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                        + Add Product
+                    <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight">Return Request</h3>
+                    <button type="button" id="addProductBtn" >
+                       
                     </button>
                 </div>
 
@@ -187,7 +187,7 @@
                             <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50">
                                 <th class="py-4 px-6 w-12 text-center">Inc</th>
                                 <th class="py-4 px-6">Product</th>
-                                <th class="py-4 px-6 w-32 text-center">Qty (Units)</th>
+                                <!-- <th class="py-4 px-6 w-32 text-center">Qty (Units)</th> -->
                                 <th class="py-4 px-6 w-32 text-center">Pieces</th>
                                 <th class="py-4 px-6 w-20 text-center">Action</th>
                             </tr>
@@ -275,9 +275,7 @@
                                 ${productOptions}
                             </select>
                         </td>
-                        <td class="py-4 px-6">
-                            <input type="number" name="items[${rowCount}][quantity]" class="w-full h-10 px-3 text-center border border-slate-200 rounded-lg text-sm font-bold focus:border-rose-400 focus:outline-none" min="0" placeholder="0">
-                        </td>
+                        
                         <td class="py-4 px-6">
                             <input type="number" name="items[${rowCount}][pieces]" class="w-full h-10 px-3 text-center border border-slate-200 rounded-lg text-sm font-bold focus:border-rose-400 focus:outline-none" min="0" placeholder="0">
                         </td>
