@@ -47,6 +47,10 @@ class DashboardController extends Controller
         
         $returnRequests = null;
         if ($tab === 'returns') {
+            $perPage = request()->get('per_page', 20);
+            if (!in_array($perPage, [10, 20, 30, 100])) {
+                $perPage = 20;
+            }
             $returnRequests = \App\Models\ReturnRequest::with(['order', 'orderItem.product', 'product'])
                 ->where(function($q) use ($manufacturingTeam) {
                     $q->where('manufacturing_team_id', $manufacturingTeam->id)
@@ -55,8 +59,8 @@ class DashboardController extends Controller
                       });
                 })
                 ->latest()
-                ->paginate(20);
-            $returnRequests->appends(['tab' => $tab]);
+                ->paginate($perPage);
+            $returnRequests->appends(['tab' => $tab, 'per_page' => $perPage]);
         }
         
         return view('manufacturing-team.dashboard', compact('manufacturingTeam', 'orders', 'returnRequests', 'tab', 'allocatedCount', 'acceptedCount', 'completedCount', 'returnRequestsCount'));

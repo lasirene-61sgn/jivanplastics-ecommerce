@@ -233,7 +233,7 @@
                                             <th class="py-5 px-4 font-black">Product</th>
                                             <th class="py-5 px-4 font-black">Qty / Pieces</th>
                                             <th class="py-5 px-4 font-black text-center">Status</th>
-                                            <th class="py-5 px-8 text-right font-black">Actions</th>
+                                            <!-- <th class="py-5 px-8 text-right font-black">Actions</th> -->
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-50">
@@ -280,7 +280,7 @@
                                                     {{ $return->status }}
                                                 </span>
                                             </td>
-                                            <td class="py-6 px-8 text-right">
+                                            <!-- <td class="py-6 px-8 text-right">
                                                 @if($return->status == 'pending' || $return->status == 'processing')
                                                 <form action="{{ route('manufacturing-team.returns.status', $return) }}" method="POST" class="inline-flex items-center gap-2">
                                                     @csrf @method('PUT')
@@ -291,14 +291,24 @@
                                                     <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">Update</button>
                                                 </form>
                                                 @endif
-                                            </td>
+                                            </td> -->
                                         </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="p-8 bg-slate-50/30 border-t border-slate-100">
-                                {{ $returnRequests->links() }}
+                            <div class="p-8 bg-slate-50/30 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Show</span>
+                                    <select onchange="window.location.href = this.value" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-rose-500">
+                                        @foreach([10, 20, 30, 100] as $size)
+                                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => 1]) }}" {{ request()->get('per_page', 20) == $size ? 'selected' : '' }}>{{ $size }} per page</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="flex-1 sm:flex-none">
+                                    {{ $returnRequests->links() }}
+                                </div>
                             </div>
                         @else
                             <div class="p-20 text-center">

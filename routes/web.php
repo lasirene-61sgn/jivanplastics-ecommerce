@@ -134,6 +134,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         
         // Return request management routes
         Route::get('/return-requests', [ReturnRequestController::class, 'index'])->name('return-requests.index');
+        Route::post('/return-requests/bulk-action', [ReturnRequestController::class, 'bulkAction'])->name('return-requests.bulk-action');
         Route::get('/return-requests/{returnRequest}', [ReturnRequestController::class, 'show'])->name('return-requests.show');
         Route::get('/return-requests/{returnRequest}/return-note/{returnNote}', [ReturnRequestController::class, 'showReturnNote'])->name('return-requests.return-note');
         Route::put('/return-requests/{returnRequest}/status', [ReturnRequestController::class, 'updateStatus'])->name('return-requests.update-status');

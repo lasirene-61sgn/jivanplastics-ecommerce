@@ -15,13 +15,98 @@ class ReturnRequestController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        $returnRequests = ReturnRequest::with(['order', 'orderItem.product', 'customer'])
-            ->latest()
-            ->paginate(20);
-            
-        return view('admin.return-requests.index', compact('returnRequests'));
+        $search = $request->get('search');
+        $status = $request->get('status');
+        $perPage = $request->get('per_page', 20);
+        if (!in_array($perPage, [10, 20, 30, 100])) {
+            $perPage = 20;
+        }
+
+        $query = ReturnRequest::with(['order', 'orderItem.product', 'customer', 'product']);
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('request_number', 'like', "%{$search}%")
+                  ->orWhere('reason', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($q2) use ($search) {
+                      $q2->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('order', function($q2) use ($search) {
+                      $q2->where('order_number', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('orderItem', function($q2) use ($search) {
+                      $q2->where('product_name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('product', function($q2) use ($search) {
+                      $q2->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $returnRequests = $query->latest()->paginate($perPage);
+
+        return view('admin.return-requests.index', compact('returnRequests', 'search', 'status', 'perPage'));
+    }
+    
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'selected_ids' => 'required|array',
+            'selected_ids.*' => 'exists:return_requests,id',
+            'action' => 'required|in:approve,reject',
+            'reject_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $ids = $request->selected_ids;
+        $action = $request->action;
+        $notes = $request->reject_notes;
+
+        if ($action === 'approve') {
+            $approvedCount = 0;
+            foreach ($ids as $id) {
+                $returnRequest = ReturnRequest::find($id);
+                if ($returnRequest && $returnRequest->status !== 'completed') {
+                    $returnRequest->update([
+                        'status' => 'completed',
+                        'admin_notes' => $returnRequest->admin_notes . ($returnRequest->admin_notes ? "\n" : "") . "[Bulk System] Bulk approved.",
+                        'resolved_at' => now(),
+                    ]);
+
+                    if (!$returnRequest->returnNote()->exists()) {
+                        if ($returnRequest->order_id && !$returnRequest->invoice_id) {
+                            $this->generateReturnInvoice($returnRequest);
+                        }
+                        
+                        $returnNote = $this->generateReturnNote($returnRequest, 'debit', 0);
+                        $this->deductLoyaltyPointsForReturn($returnRequest, $returnNote);
+                    }
+                    $approvedCount++;
+                }
+            }
+            return redirect()->back()->with('success', "{$approvedCount} return request(s) successfully approved.");
+        } elseif ($action === 'reject') {
+            $rejectedCount = 0;
+            foreach ($ids as $id) {
+                $returnRequest = ReturnRequest::find($id);
+                if ($returnRequest && $returnRequest->status !== 'completed') {
+                    $returnRequest->update([
+                        'status' => 'rejected',
+                        'admin_notes' => $notes ?? '[Bulk System] Bulk rejected.',
+                        'resolved_at' => now(),
+                    ]);
+                    $rejectedCount++;
+                }
+            }
+            return redirect()->back()->with('success', "{$rejectedCount} return request(s) successfully rejected.");
+        }
+
+        return redirect()->back()->with('error', 'Invalid bulk action.');
     }
     
     /**
@@ -32,7 +117,7 @@ class ReturnRequestController extends Controller
      */
     public function show(ReturnRequest $returnRequest)
     {
-        $returnRequest->load(['order', 'orderItem.product', 'customer']);
+        $returnRequest->load(['order', 'orderItem.product', 'customer', 'returnNote']);
         
         return view('admin.return-requests.show', compact('returnRequest'));
     }
@@ -125,17 +210,19 @@ class ReturnRequestController extends Controller
         $returnRequest->update($data);
 
         // Auto-generate system invoice, Return Note and deduct loyalty points if completed
-        if ($request->status === 'completed' && !$returnRequest->invoice_id) {
-            if ($returnRequest->order_id) {
-                $invoice = $this->generateReturnInvoice($returnRequest);
+        if ($request->status === 'completed') {
+            if (!$returnRequest->returnNote()->exists()) {
                 $noteType = $request->input('note_type', 'debit'); // Default to debit for automatic creation
                 $adjustmentAmount = $request->input('adjustment_amount', 0);
-                $this->generateReturnNote($returnRequest, $noteType, $adjustmentAmount); 
-                $this->deductLoyaltyPointsForReturn($returnRequest, $invoice);
-            } else {
-                // For Manufacturing direct returns without an order, we just complete it
-                // We could generate a debit note here if we had pricing info, but we don't.
-                $returnRequest->update(['admin_notes' => $returnRequest->admin_notes . "\n[System] Completed Manufacturing Direct Return without order pricing."]);
+                
+                if ($returnRequest->order_id) {
+                    if (!$returnRequest->invoice_id) {
+                        $invoice = $this->generateReturnInvoice($returnRequest);
+                    }
+                }
+                
+                $returnNote = $this->generateReturnNote($returnRequest, $noteType, $adjustmentAmount);
+                $this->deductLoyaltyPointsForReturn($returnRequest, $returnNote);
             }
         }
         
@@ -221,7 +308,7 @@ class ReturnRequestController extends Controller
     {
         $order = $returnRequest->order;
         $orderItem = $returnRequest->orderItem;
-        $product = $orderItem->product;
+        $product = $orderItem ? $orderItem->product : $returnRequest->product;
         
         $prefix = ($type === 'credit') ? 'CN-' : 'DN-';
         $noteNumber = $prefix . strtoupper(\Illuminate\Support\Str::random(8));
@@ -229,20 +316,36 @@ class ReturnRequestController extends Controller
         // Use same logic as invoice for amounts
         $quantity = $returnRequest->quantity;
         $pieces = $returnRequest->pieces ?? 0;
-        $unitPrice = $orderItem->price;
-        $perQuantityPieces = $product->per_quantity_pieces > 0 ? $product->per_quantity_pieces : 1;
-        $piecePrice = $product->piece_price ?? ($unitPrice / $perQuantityPieces);
         
-        // For B2B orders or if piece price is 0, recalculate it based on unit price
-        if ($order->customer_type === 'dealer' || $piecePrice <= 0) {
-            $piecePrice = $unitPrice / $perQuantityPieces;
-        }
-        
-        $unitTax = ($orderItem->quantity > 0) ? ($orderItem->tax / $orderItem->quantity) : 0;
-        $pieceTax = $unitTax / $perQuantityPieces;
+        if ($orderItem) {
+            $unitPrice = $orderItem->price;
+            $perQuantityPieces = $product->per_quantity_pieces > 0 ? $product->per_quantity_pieces : 1;
+            $piecePrice = $product->piece_price ?? ($unitPrice / $perQuantityPieces);
+            
+            // For B2B orders or if piece price is 0, recalculate it based on unit price
+            if (($order && $order->customer_type === 'dealer') || $piecePrice <= 0) {
+                $piecePrice = $unitPrice / $perQuantityPieces;
+            }
+            
+            $unitTax = ($orderItem->quantity > 0) ? ($orderItem->tax / $orderItem->quantity) : 0;
+            $pieceTax = $unitTax / $perQuantityPieces;
 
-        $unitDiscount = ($orderItem->quantity > 0) ? (($orderItem->discount_amount ?? 0) / $orderItem->quantity) : 0;
-        $pieceDiscount = $unitDiscount / $perQuantityPieces;
+            $unitDiscount = ($orderItem->quantity > 0) ? (($orderItem->discount_amount ?? 0) / $orderItem->quantity) : 0;
+            $pieceDiscount = $unitDiscount / $perQuantityPieces;
+        } else {
+            // For Manufacturing Direct returns without an order
+            $unitPrice = $product->price ?? 0;
+            $perQuantityPieces = $product->per_quantity_pieces > 0 ? $product->per_quantity_pieces : 1;
+            $piecePrice = $product->piece_price ?? ($unitPrice / $perQuantityPieces);
+            if ($piecePrice <= 0) {
+                $piecePrice = $unitPrice / $perQuantityPieces;
+            }
+            
+            $unitTax = 0;
+            $pieceTax = 0;
+            $unitDiscount = 0;
+            $pieceDiscount = 0;
+        }
 
         $subtotal = ($unitPrice * $quantity) + ($piecePrice * $pieces);
         $taxTotal = ($unitTax * $quantity) + ($pieceTax * $pieces);
@@ -253,7 +356,7 @@ class ReturnRequestController extends Controller
 
         // Create Return Note
         $returnNote = ReturnNote::create([
-            'order_id' => $order->id,
+            'order_id' => $order?->id,
             'return_request_id' => $returnRequest->id,
             'type' => $type,
             'note_number' => $noteNumber,
@@ -267,7 +370,7 @@ class ReturnRequestController extends Controller
         // Create Return Note Item
         ReturnNoteItem::create([
             'return_note_id' => $returnNote->id,
-            'order_item_id' => $orderItem->id,
+            'order_item_id' => $orderItem?->id,
             'quantity' => $quantity,
             'pieces' => $pieces,
             'unit_price' => $unitPrice,
@@ -286,17 +389,20 @@ class ReturnRequestController extends Controller
      * @param  \App\Models\Invoice  $returnInvoice
      * @return void
      */
-    private function deductLoyaltyPointsForReturn(ReturnRequest $returnRequest, \App\Models\Invoice $returnInvoice)
+    private function deductLoyaltyPointsForReturn(ReturnRequest $returnRequest, \App\Models\ReturnNote $returnNote)
     {
-        $order = $returnRequest->order;
         $customer = $returnRequest->customer;
 
-        if (!$customer || $order->customer_type !== 'dealer') {
+        if (!$customer || $customer->customer_type !== 'dealer') {
             return;
         }
 
-        // Calculate 0.1% of the return invoice total
-        $deduction = max(1, floor($returnInvoice->total * 0.001));
+        if ($returnNote->total <= 0) {
+            return;
+        }
+
+        // Calculate 0.1% of the return note total
+        $deduction = max(1, floor($returnNote->total * 0.001));
 
         if ($deduction > 0) {
             // We use a custom deduction to allow it to go to 0 but not negative if possible, 

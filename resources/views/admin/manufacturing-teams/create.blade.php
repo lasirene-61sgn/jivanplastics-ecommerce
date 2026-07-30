@@ -49,14 +49,14 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label for="password" class="text-sm font-semibold text-slate-700">Password *</label>
-                    <input type="password" name="password" id="password" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all" required>
+                    <label for="password" class="text-sm font-semibold text-slate-700">Password </label>
+                    <input type="password" name="password" id="password" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
                     @error('password') <p class="text-xs text-red-500 font-medium">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="space-y-2">
-                    <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirm Password *</label>
-                    <input type="password" name="password_confirmation" id="password_confirmation" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all" required>
+                    <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirm Password </label>
+                    <input type="password" name="password_confirmation" id="password_confirmation" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all>
                 </div>
             </div>
 

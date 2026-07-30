@@ -28,7 +28,7 @@
                 <p class="text-xs text-slate-400 font-bold tracking-widest uppercase mt-1">Post-Purchase Ticket</p>
             </div>
         </div>
-        <a href="{{ route('admin.return-requests.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
+        <a href="{{ route('admin.return-requests.index', request()->only(['page', 'search', 'status', 'per_page'])) }}" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
             <i class="fas fa-arrow-left mr-2"></i> Back to Queue
         </a>
     </div>
@@ -229,13 +229,13 @@
                 <div class="flex flex-col items-center justify-center py-4">
                     @php
                         $manColor = match($returnRequest->status) {
-                            'approved' => 'text-green-400',
+                            'approved', 'completed' => 'text-green-400',
                             'rejected' => 'text-rose-400',
                             'pending' => 'text-amber-400',
                             default => 'text-blue-400'
                         };
                     @endphp
-                    <span class="text-3xl font-black uppercase tracking-tighter {{ $manColor }}">{{ $returnRequest->status }}</span>
+                    <span class="text-3xl font-black uppercase tracking-tighter {{ $manColor }}">{{ $returnRequest->status === 'completed' ? 'approved' : $returnRequest->status }}</span>
                     <div class="mt-4 flex flex-col items-center text-center space-y-2">
                         <div class="text-[10px] font-bold text-slate-500 uppercase">Received: {{ $returnRequest->created_at->format('d M, Y') }}</div>
                         @if($returnRequest->resolved_at)
@@ -248,72 +248,33 @@
             @if($returnRequest->status !== 'completed')
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
                 <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2">Admin Resolution</h3>
-                <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form action="{{ route('admin.return-requests.update-status', $returnRequest) }}" method="POST" class="space-y-6">
                     @csrf
                     @method('PUT')
                     
-                    <div class="space-y-2">
-                        <label class="text-xs font-black text-slate-700 uppercase tracking-widest">Adjust Pipeline</label>
-                        <select name="status" id="status_select" class="w-full px-4 py-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold text-sm outline-none focus:border-indigo-500" required onchange="toggleNoteType(this.value)">
-                            <option value="pending" {{ $returnRequest->status === 'pending' ? 'selected' : '' }}>Pending Audit</option>
-                            <option value="approved" {{ $returnRequest->status === 'approved' ? 'selected' : '' }}>Approve Request</option>
-                            <option value="rejected" {{ $returnRequest->status === 'rejected' ? 'selected' : '' }}>Reject Request</option>
-                            <option value="processing" {{ $returnRequest->status === 'processing' ? 'selected' : '' }}>In-Processing</option>
-                            <option value="completed" {{ $returnRequest->status === 'completed' ? 'selected' : '' }}>Close Ticket</option>
-                        </select>
-                    </div>
+                    <input type="hidden" name="status" value="completed">
+                    <input type="hidden" name="note_type" value="debit">
+                    <input type="hidden" name="adjustment_amount" value="0">
 
-                    <div class="space-y-2" id="note_type_container" style="{{ old('status', $returnRequest->status) === 'completed' ? '' : 'display: none;' }}">
-                        <label class="text-xs font-black text-slate-700 uppercase tracking-widest">Select Note Type</label>
-                        <div class="flex gap-4">
-                            <label class="flex-1 cursor-pointer group">
-                                <input type="radio" name="note_type" value="credit" class="hidden peer" {{ old('note_type', 'credit') === 'credit' ? 'checked' : '' }}>
-                                <div class="p-4 rounded-2xl border-2 border-slate-100 bg-slate-50 text-center transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 group-hover:border-slate-200">
-                                    <span class="block text-xs font-black uppercase tracking-widest text-slate-400 peer-checked:text-emerald-600">Credit Note</span>
-                                    <span class="block text-[9px] font-bold text-slate-400 mt-1 peer-checked:text-emerald-500 italic">(Return to dealer balance)</span>
-                                </div>
-                            </label>
-                            <label class="flex-1 cursor-pointer group">
-                                <input type="radio" name="note_type" value="debit" class="hidden peer" {{ old('note_type') === 'debit' ? 'checked' : '' }}>
-                                <div class="p-4 rounded-2xl border-2 border-slate-100 bg-slate-50 text-center transition-all peer-checked:border-amber-500 peer-checked:bg-amber-50 group-hover:border-slate-200">
-                                    <span class="block text-xs font-black uppercase tracking-widest text-slate-400 peer-checked:text-amber-600">Debit Note</span>
-                                    <span class="block text-[9px] font-bold text-slate-400 mt-1 peer-checked:text-amber-500 italic">(Adjustment/Chargeback)</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2" id="adjustment_container" style="{{ old('status', $returnRequest->status) === 'completed' ? '' : 'display: none;' }}">
-                        <label class="text-xs font-black text-slate-700 uppercase tracking-widest">Manual Adjustment Amount</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-sm">₹</div>
-                            <input type="number" step="0.01" name="adjustment_amount" value="{{ old('adjustment_amount', 0) }}" class="w-full pl-8 pr-4 py-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold text-sm outline-none focus:border-indigo-500" placeholder="0.00">
-                        </div>
-                        <p class="text-[9px] font-bold text-slate-400 italic">Enter positive for charges (e.g. 500), negative for reductions (e.g. -200).</p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-xs font-black text-slate-700 uppercase tracking-widest">Upload Dispatch Proof</label>
-                        <input type="file" name="dispatch_proof_image" accept="image/*" class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none focus:border-indigo-500">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-xs font-black text-slate-700 uppercase tracking-widest">Upload Return/Replacement Invoice</label>
-                        <input type="file" name="invoice_proof_image" accept="image/*" class="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none focus:border-indigo-500">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-xs font-black text-slate-700 uppercase tracking-widest">Internal Audit Notes</label>
-                        <textarea name="admin_notes" rows="4" class="w-full px-4 py-4 rounded-2xl border border-slate-200 text-sm font-medium outline-none focus:border-indigo-500 bg-slate-50 italic shadow-inner" placeholder="Detailed reasoning for approval/rejection...">{{ old('admin_notes', $returnRequest->admin_notes) }}</textarea>
-                    </div>
-
-                    <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 transition-all active:scale-95">
-                        Commit Resolution
+                    <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-100 transition-all active:scale-95">
+                        Approve Request
                     </button>
                 </form>
             </div>
             @else
                 <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
+                    @if($returnRequest->returnNote)
+                    <div class="p-5 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between shadow-sm">
+                        <div>
+                            <span class="text-[10px] font-black text-amber-800 block uppercase tracking-widest">{{ ucfirst($returnRequest->returnNote->type) }} Note</span>
+                            <span class="text-base font-mono font-bold text-slate-900 block mt-1">{{ $returnRequest->returnNote->note_number }}</span>
+                        </div>
+                        <div class="text-right flex flex-col items-end">
+                            <span class="text-lg font-black text-slate-900 block">₹{{ number_format($returnRequest->returnNote->total, 2) }}</span>
+                            <a href="{{ route('admin.return-requests.return-note', [$returnRequest, $returnRequest->returnNote]) }}" target="_blank" class="text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors mt-1 block">View Full Note <i class="fas fa-external-link-alt ml-1 text-[9px]"></i></a>
+                        </div>
+                    </div>
+                    @endif
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 italic">Dispatch Proof</h3>
@@ -357,23 +318,6 @@
         </div>
     </div>
 </div>
-
-
-@push('scripts')
-<script>
-    function toggleNoteType(status) {
-        const noteContainer = document.getElementById('note_type_container');
-        const adjContainer = document.getElementById('adjustment_container');
-        if (status === 'completed') {
-            noteContainer.style.display = 'block';
-            adjContainer.style.display = 'block';
-        } else {
-            noteContainer.style.display = 'none';
-            adjContainer.style.display = 'none';
-        }
-    }
-</script>
-@endpush
 @endsection
 
 

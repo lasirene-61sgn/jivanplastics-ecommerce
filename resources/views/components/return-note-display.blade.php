@@ -1,6 +1,6 @@
 @php
     $displayOrder = $returnNote->order;
-    $customer = $displayOrder->customer;
+    $customer = $displayOrder ? $displayOrder->customer : ($returnNote->returnRequest ? $returnNote->returnRequest->customer : null);
     $typeLabel = $returnNote->type == 'credit' ? 'Credit Note' : 'Debit Note';
     $typeColor = $returnNote->type == 'credit' ? 'emerald' : 'amber';
 @endphp
@@ -19,7 +19,11 @@
                     </span>
                     <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-600 shadow-sm">
-                        ORIGINAL ORDER: #{{ $displayOrder->order_number }}
+                        @if($displayOrder)
+                            ORIGINAL ORDER: #{{ $displayOrder->order_number }}
+                        @else
+                            ORIGINAL REQUEST: #{{ $returnNote->returnRequest->request_number ?? 'N/A' }}
+                        @endif
                     </span>
                 </div>
             </div>
@@ -37,12 +41,19 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-10 p-8 sm:p-10 bg-white border-b border-slate-100">
         <div class="space-y-4">
             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 pb-2">Billing Details</h4>
+            @if($displayOrder)
             <address class="not-italic text-sm leading-relaxed text-slate-600 font-medium">
                 <span class="block text-slate-900 font-bold mb-1 italic">Recipient Address:</span>
                 {{ $displayOrder->billing_address }}<br>
                 {{ $displayOrder->billing_city }}, {{ $displayOrder->billing_state }} {{ $displayOrder->billing_zip }}<br>
                 <span class="font-bold text-slate-400 uppercase text-[10px] tracking-widest">{{ $displayOrder->billing_country }}</span>
             </address>
+            @else
+            <address class="not-italic text-sm leading-relaxed text-slate-600 font-medium">
+                <span class="block text-slate-900 font-bold mb-1 italic">Recipient Address:</span>
+                N/A (Manufacturing Direct Return)<br>
+            </address>
+            @endif
         </div>
 
         <div class="space-y-4">
@@ -52,7 +63,7 @@
                 <p class="mb-2">Request ID: #{{ $returnNote->return_request_id }}</p>
                 <span class="block text-slate-900 font-bold mb-1 italic">Return Reason:</span>
                 <p class="bg-{{ $typeColor }}-50 p-2 rounded text-xs border border-{{ $typeColor }}-100 italic">
-                    {{ $returnNote->returnRequest->reason }}
+                    {{ $returnNote->returnRequest->reason ?? 'N/A' }}
                 </p>
             </div>
         </div>
@@ -96,8 +107,8 @@
                     @foreach($returnNote->items as $item)
                         @php
                             $orderItem = $item->orderItem;
-                            $product = $orderItem ? $orderItem->product : null;
-                            $productName = $orderItem ? $orderItem->product_name : 'N/A';
+                            $product = $orderItem ? $orderItem->product : ($returnNote->returnRequest ? $returnNote->returnRequest->product : null);
+                            $productName = $orderItem ? $orderItem->product_name : ($product ? $product->name : 'N/A');
                             $imagePath = $product && $product->images->first() ? $product->images->first()->image_path : null;
                         @endphp
                         <tr class="hover:bg-slate-50/50 transition-colors">
@@ -135,7 +146,7 @@
                                 </div>
                             </td>
                             <td class="px-6 py-5 text-right">
-                                <span class="text-sm font-black text-slate-900 whitespace-nowrap italic">₹{{ number_format($returnNote->subtotal, 2) }}</span>
+                                <span class="text-sm font-black text-slate-900 whitespace-nowrap italic">₹{{ number_format($item->total, 2) }}</span>
                             </td>
                         </tr>
                     @endforeach

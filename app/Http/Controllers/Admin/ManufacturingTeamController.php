@@ -37,7 +37,7 @@ class ManufacturingTeamController extends Controller
             'contact_person' => 'required|string|max:255',
             'email' => 'required|email|unique:manufacturing_teams,email',
             'phone' => 'required|string|max:20',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'nullable|string|min:8|confirmed',
             'address' => 'required|string',
             'manufacturing_unit_type' => 'nullable|string|max:255',
             'is_active' => 'boolean',

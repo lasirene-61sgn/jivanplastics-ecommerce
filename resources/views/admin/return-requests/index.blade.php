@@ -13,138 +13,262 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        @if($returnRequests->count() > 0)
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50/50 border-b border-slate-200">
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Order Info</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Customer & Product</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Qty / Type</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Reason</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @foreach($returnRequests as $request)
-                            <tr class="hover:bg-slate-50/30 transition-colors group">
-                                <td class="px-6 py-4">
-                                    @php
-                                        $lineNum = 1;
-                                        if ($request->order && $request->order_item_id) {
-                                            $lineNum = $request->order->items->search(function($item) use ($request) {
-                                                return $item->id === $request->order_item_id;
-                                            }) + 1;
-                                        }
-                                    @endphp
-                                    <span class="text-sm font-black text-slate-800">RR{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</span>
-                                    @if($request->request_number)
-                                        <div class="text-xs font-bold text-slate-500">{{ $request->request_number }}</div>
-                                    @endif
-                                    @if($request->order)
-                                        <div class="text-xs font-black text-slate-900 mt-0.5">Ord: #{{ $request->order->order_number }}</div>
-                                    @else
-                                        <div class="text-[10px] font-bold text-rose-500 uppercase mt-1 tracking-widest bg-rose-50 px-2 py-0.5 rounded inline-block border border-rose-100">Mfg Direct</div>
-                                    @endif
-                                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{{ $request->created_at->format('d M, Y') }}</div>
-                                    
-                                    @if($request->order && $request->order->manufacturingTeam)
-                                    <div class="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                        <div class="text-[10px] font-black text-slate-700 uppercase tracking-widest">{{ $request->order->manufacturingTeam->factory_name }}</div>
-                                        <div class="flex flex-col mt-1 space-y-0.5">
-                                            <span class="text-[9px] text-slate-500 font-bold">Alloc: {{ $request->created_at->format('d M, y') }}</span>
-                                            <span class="text-[9px] text-slate-500 font-bold">Comp: {{ $request->resolved_at ? $request->resolved_at->format('d M, y') : 'Pending' }}</span>
-                                        </div>
-                                    </div>
-                                    @endif
-                                </td>
-
-                                <td class="px-6 py-4">
-                                    <div class="text-sm font-bold text-slate-800">{{ $request->customer->name }} <span class="text-[10px] text-slate-500 uppercase">({{ $request->customer->customer_type }})</span></div>
-                                    <div class="text-xs text-slate-500 mb-1"><i class="fas fa-phone-alt text-[10px] mr-1"></i>{{ $request->customer->phone }}</div>
-                                    @php
-                                        $productModel = null;
-                                        $productName = 'N/A';
-                                        if ($request->orderItem) {
-                                            $productModel = $request->orderItem->product;
-                                            $productName = $productModel ? $productModel->name : $request->orderItem->product_name;
-                                        } elseif ($request->product) {
-                                            $productModel = $request->product;
-                                            $productName = $productModel->name;
-                                        }
-                                    @endphp
-                                    <div class="text-xs text-indigo-600 font-bold truncate max-w-[180px]">
-                                        {{ $productName }}
-                                    </div>
-                                    @if($productModel)
-                                        <div class="mt-1 flex flex-wrap gap-1 text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
-                                            @if($productModel->size)
-                                                <span class="px-1.5 py-0.5 bg-slate-100 rounded">S: {{ $productModel->size }}</span>
-                                            @endif
-                                            @if($productModel->thickness)
-                                                <span class="px-1.5 py-0.5 bg-slate-100 rounded">T: {{ $productModel->thickness }}</span>
-                                            @endif
-                                            @if($productModel->color)
-                                                <span class="px-1.5 py-0.5 bg-slate-100 rounded">C: {{ $productModel->color }}</span>
-                                            @endif
-                                        </div>
-                                    @endif
-                                </td>
-
-                                <td class="px-6 py-4 text-center">
-                                    <div class="text-sm font-black text-slate-900">{{ $request->quantity }} units</div>
-                                    @if($request->pieces > 0)
-                                        <div class="text-sm font-black text-slate-900 mt-1">{{ $request->pieces }} pieces</div>
-                                    @endif
-                                    <span class="text-[9px] font-black uppercase tracking-tighter text-slate-400 italic">{{ $request->type }}</span>
-                                </td>
-
-                                <td class="px-6 py-4">
-                                    <p class="text-xs text-slate-600 line-clamp-1 max-w-[150px] italic">"{{ $request->reason }}"</p>
-                                </td>
-
-                                <td class="px-6 py-4 text-center">
-                                    @php
-                                        $badgeClass = match($request->status) {
-                                            'pending' => 'bg-amber-100 text-amber-700',
-                                            'approved' => 'bg-green-100 text-green-700',
-                                            'rejected' => 'bg-red-100 text-red-700',
-                                            'processing' => 'bg-blue-100 text-blue-700',
-                                            'completed' => 'bg-slate-900 text-white',
-                                            default => 'bg-slate-100 text-slate-500'
-                                        };
-                                    @endphp
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm {{ $badgeClass }}">
-                                        {{ $request->status }}
-                                    </span>
-                                </td>
-
-                                <td class="px-6 py-4 text-right whitespace-nowrap">
-                                    <a href="{{ route('admin.return-requests.show', $request) }}" class="inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest rounded-xl shadow-sm hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all active:scale-95">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+    <!-- Filters Form -->
+    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <form method="GET" action="{{ route('admin.return-requests.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Search</label>
+                <input type="text" name="search" value="{{ $search }}" placeholder="ID, Request#, Customer, Order..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none focus:border-indigo-500">
+            </div>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</label>
+                <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none focus:border-indigo-500">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {{ $status === 'pending' ? 'selected' : '' }}>Pending Audit</option>
+                    <option value="approved" {{ $status === 'approved' ? 'selected' : '' }}>Approved</option>
+                    <option value="processing" {{ $status === 'processing' ? 'selected' : '' }}>In-Processing</option>
+                    <option value="completed" {{ $status === 'completed' ? 'selected' : '' }}>Completed/Closed</option>
+                    <option value="rejected" {{ $status === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                </select>
             </div>
 
-            @if($returnRequests->hasPages())
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100">
-                    {{ $returnRequests->links() }}
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Per Page</label>
+                <select name="per_page" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none focus:border-indigo-500">
+                    <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10 Items</option>
+                    <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20 Items</option>
+                    <option value="30" {{ $perPage == 30 ? 'selected' : '' }}>30 Items</option>
+                    <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100 Items</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-colors">
+                    Filter
+                </button>
+                <a href="{{ route('admin.return-requests.index') }}" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest transition-colors flex items-center justify-center">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Action Wrapper Form -->
+    <form action="{{ route('admin.return-requests.bulk-action') }}" method="POST" id="bulk-action-form">
+        @csrf
+        <input type="hidden" name="action" id="bulk-action-type" value="">
+
+        <!-- Bulk Controls Panel -->
+        <div id="bulk-controls" class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-4 hidden">
+            <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
+                <span class="text-xs font-black text-indigo-900 uppercase tracking-widest" id="selected-count-label">0 items selected</span>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div class="flex-1 md:flex-initial min-w-[200px]" id="bulk-reject-notes-container">
+                    <input type="text" name="reject_notes" id="bulk-reject-notes" placeholder="Optional Rejection Notes..." class="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none focus:border-rose-500">
+                </div>
+                <button type="button" onclick="submitBulkAction('approve')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                    Bulk Approve
+                </button>
+                <button type="button" onclick="submitBulkAction('reject')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                    Bulk Reject
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            @if($returnRequests->count() > 0)
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/50 border-b border-slate-200">
+                                <th class="py-4 pl-6 pr-2 w-10 text-center">
+                                    <input type="checkbox" id="select-all-checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                                </th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Order Info</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Customer & Product</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Qty / Type</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Reason</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach($returnRequests as $request)
+                                <tr class="hover:bg-slate-50/30 transition-colors group">
+                                    <td class="py-4 pl-6 pr-2 text-center">
+                                        @if($request->status !== 'completed' && $request->status !== 'rejected')
+                                            <input type="checkbox" name="selected_ids[]" value="{{ $request->id }}" class="return-request-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                                        @else
+                                            <span class="inline-block w-4 h-4"></span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @php
+                                            $lineNum = 1;
+                                            if ($request->order && $request->order_item_id) {
+                                                $lineNum = $request->order->items->search(function($item) use ($request) {
+                                                    return $item->id === $request->order_item_id;
+                                                }) + 1;
+                                            }
+                                        @endphp
+                                        <span class="text-sm font-black text-slate-800">RR{{ str_pad($request->id, 3, '0', STR_PAD_LEFT) }}/{{ $lineNum }}</span>
+                                        @if($request->request_number)
+                                            <div class="text-xs font-bold text-slate-500">{{ $request->request_number }}</div>
+                                        @endif
+                                        @if($request->order)
+                                            <div class="text-xs font-black text-slate-900 mt-0.5">Ord: #{{ $request->order->order_number }}</div>
+                                        @else
+                                            <div class="text-[10px] font-bold text-rose-500 uppercase mt-1 tracking-widest bg-rose-50 px-2 py-0.5 rounded inline-block border border-rose-100">Mfg Direct</div>
+                                        @endif
+                                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{{ $request->created_at->format('d M, Y') }}</div>
+                                        
+                                        @if($request->order && $request->order->manufacturingTeam)
+                                        <div class="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                            <div class="text-[10px] font-black text-slate-700 uppercase tracking-widest">{{ $request->order->manufacturingTeam->factory_name }}</div>
+                                            <div class="flex flex-col mt-1 space-y-0.5">
+                                                <span class="text-[9px] text-slate-500 font-bold">Alloc: {{ $request->created_at->format('d M, y') }}</span>
+                                                <span class="text-[9px] text-slate-500 font-bold">Comp: {{ $request->resolved_at ? $request->resolved_at->format('d M, y') : 'Pending' }}</span>
+                                            </div>
+                                        </div>
+                                        @endif
+                                    </td>
+
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-bold text-slate-800">{{ $request->customer->name }} <span class="text-[10px] text-slate-500 uppercase">({{ $request->customer->customer_type }})</span></div>
+                                        <div class="text-xs text-slate-500 mb-1"><i class="fas fa-phone-alt text-[10px] mr-1"></i>{{ $request->customer->phone }}</div>
+                                        @php
+                                            $productModel = null;
+                                            $productName = 'N/A';
+                                            if ($request->orderItem) {
+                                                $productModel = $request->orderItem->product;
+                                                $productName = $productModel ? $productModel->name : $request->orderItem->product_name;
+                                            } elseif ($request->product) {
+                                                $productModel = $request->product;
+                                                $productName = $productModel->name;
+                                            }
+                                        @endphp
+                                        <div class="text-xs text-indigo-600 font-bold truncate max-w-[180px]">
+                                            {{ $productName }}
+                                        </div>
+                                        @if($productModel)
+                                            <div class="mt-1 flex flex-wrap gap-1 text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
+                                                @if($productModel->size)
+                                                    <span class="px-1.5 py-0.5 bg-slate-100 rounded">S: {{ $productModel->size }}</span>
+                                                @endif
+                                                @if($productModel->thickness)
+                                                    <span class="px-1.5 py-0.5 bg-slate-100 rounded">T: {{ $productModel->thickness }}</span>
+                                                @endif
+                                                @if($productModel->color)
+                                                    <span class="px-1.5 py-0.5 bg-slate-100 rounded">C: {{ $productModel->color }}</span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="text-sm font-black text-slate-900">{{ $request->quantity }} units</div>
+                                        @if($request->pieces > 0)
+                                            <div class="text-sm font-black text-slate-900 mt-1">{{ $request->pieces }} pieces</div>
+                                        @endif
+                                        <span class="text-[9px] font-black uppercase tracking-tighter text-slate-400 italic">{{ $request->type }}</span>
+                                    </td>
+
+                                    <td class="px-6 py-4">
+                                        <p class="text-xs text-slate-600 line-clamp-1 max-w-[150px] italic">"{{ $request->reason }}"</p>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        @php
+                                            $badgeClass = match($request->status) {
+                                                'pending' => 'bg-amber-100 text-amber-700',
+                                                'approved', 'completed' => 'bg-green-100 text-green-700',
+                                                'rejected' => 'bg-red-100 text-red-700',
+                                                'processing' => 'bg-blue-100 text-blue-700',
+                                                default => 'bg-slate-100 text-slate-500'
+                                            };
+                                            $displayText = $request->status === 'completed' ? 'approved' : $request->status;
+                                        @endphp
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm {{ $badgeClass }}">
+                                            {{ $displayText }}
+                                        </span>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-right whitespace-nowrap">
+                                        <a href="{{ route('admin.return-requests.show', array_merge([$request], request()->only(['page', 'search', 'status', 'per_page']))) }}" class="inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest rounded-xl shadow-sm hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all active:scale-95">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                @if($returnRequests->hasPages())
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100">
+                        {{ $returnRequests->appends(request()->except('page'))->links() }}
+                    </div>
+                @endif
+            @else
+                <div class="p-20 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
+                    </div>
+                    <p class="text-slate-500 font-medium italic text-sm">No return requests found in the pipeline.</p>
                 </div>
             @endif
-        @else
-            <div class="p-20 text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
-                </div>
-                <p class="text-slate-500 font-medium italic text-sm">No return requests found in the pipeline.</p>
-            </div>
-        @endif
-    </div>
+        </div>
+    </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAll = document.getElementById('select-all-checkbox');
+        const checkboxes = document.querySelectorAll('.return-request-checkbox');
+        const bulkControls = document.getElementById('bulk-controls');
+        const countLabel = document.getElementById('selected-count-label');
+        
+        function updateBulkPanel() {
+            const checkedCount = document.querySelectorAll('.return-request-checkbox:checked').length;
+            if (checkedCount > 0) {
+                bulkControls.classList.remove('hidden');
+                countLabel.textContent = `${checkedCount} item(s) selected`;
+            } else {
+                bulkControls.classList.add('hidden');
+            }
+        }
+        
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => {
+                    cb.checked = selectAll.checked;
+                });
+                updateBulkPanel();
+            });
+        }
+        
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                if (!cb.checked) {
+                    selectAll.checked = false;
+                } else {
+                    const allChecked = document.querySelectorAll('.return-request-checkbox:checked').length === checkboxes.length;
+                    selectAll.checked = allChecked;
+                }
+                updateBulkPanel();
+            });
+        });
+    });
+
+    function submitBulkAction(action) {
+        if (confirm(`Are you sure you want to bulk ${action} the selected requests?`)) {
+            document.getElementById('bulk-action-type').value = action;
+            document.getElementById('bulk-action-form').submit();
+        }
+    }
+</script>
 @endsection

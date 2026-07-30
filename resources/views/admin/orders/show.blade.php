@@ -530,7 +530,7 @@
                             </div>
                             @endif
 
-                            <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 mt-10">Return/Replacement Invoices</h6>
+                            <!-- <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 mt-10">Return/Replacement Invoices</h6>
                             @php
                             $returnInvoices = $order->returnRequests->whereNotNull('invoice_proof_image');
                             @endphp
@@ -557,10 +557,10 @@
                             <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center italic text-slate-400 text-xs">
                                 No return invoices uploaded.
                             </div>
-                            @endif
+                            @endif -->
 
                             {{-- Return Request to Manufacturing Form --}}
-                            <div class="mt-8 pt-6 border-t border-slate-100">
+                            <!-- <div class="mt-8 pt-6 border-t border-slate-100">
                                 <h6 class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-4">Send Return Request to Manufacturing</h6>
                                 @if($order->manufacturingTeam)
                                 <form action="{{ route('admin.orders.return-request.store', $order) }}" method="POST" class="space-y-4">
@@ -603,7 +603,7 @@
                                     Assign a manufacturing team to this order first to create a return request.
                                 </div>
                                 @endif
-                            </div>
+                            </div> -->
 
                         </div>
 

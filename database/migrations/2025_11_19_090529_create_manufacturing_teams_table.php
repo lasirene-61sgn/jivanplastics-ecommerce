@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('contact_person');
             $table->string('email')->unique();
             $table->string('phone');
-            $table->string('password');
+            $table->string('password')->nullable();
             $table->text('address');
             $table->string('manufacturing_unit_type')->nullable();
             $table->boolean('is_active')->default(true);
