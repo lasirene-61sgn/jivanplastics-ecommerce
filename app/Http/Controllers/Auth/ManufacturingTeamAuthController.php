@@ -86,7 +86,7 @@ class ManufacturingTeamAuthController extends Controller
         $team = ManufacturingTeam::where('phone', $request->phone)->first();
 
         if ($team) {
-            $team->password = Hash::make($request->password);
+            $team->password = $request->password;
             $team->save();
            
             
@@ -114,7 +114,7 @@ class ManufacturingTeamAuthController extends Controller
 
         $team =ManufacturingTeam::where('phone', $request->phone)->first();
 
-        if(!$team || Hash::check($request->password, $team->password)){
+        if(!$team || !Hash::check($request->password, $team->password)){
             return response()->json(['success' => false, 'message' => 'Enter the correct number or password']);
         }
 

@@ -39,7 +39,7 @@ class Msg91Service
         }
 
         try {
-            $response = Http::withHeaders([
+            $response = Http::withoutVerifying()->withHeaders([
                 'authkey' => $this->authKey,
                 'accept' => 'application/json',
                 'content-type' => 'application/json'

@@ -129,7 +129,12 @@
             }
         })
         .fail(function(xhr) {
-            let msg = xhr.responseJSON?.message || 'Verification failed.';
+            let msg = 'Verification failed.';
+            if (xhr.responseJSON && xhr.responseJSON.errors) {
+                msg = Object.values(xhr.responseJSON.errors)[0][0];
+            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
             showAlert('danger', msg);
         });
     });
