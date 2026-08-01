@@ -253,6 +253,7 @@ Route::prefix('manufacturing-team')->name('manufacturing-team.')->group(function
         Route::put('/orders/{order}/submit-correction', [DashboardController::class, 'submitCorrectedPieces'])->name('orders.submit-correction');
         
         // Return requests
+        Route::get('/returns', [DashboardController::class, 'returnsIndex'])->name('returns.index');
         Route::get('/returns/create', [DashboardController::class, 'createReturnRequest'])->name('returns.create');
         Route::post('/returns', [DashboardController::class, 'storeReturnRequest'])->name('returns.store');
         Route::get('/returns/customer-orders', [DashboardController::class, 'getCustomerOrders'])->name('returns.customer-orders');

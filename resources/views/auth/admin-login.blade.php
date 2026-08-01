@@ -7,288 +7,41 @@
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
     
-    <!-- Styles -->
+    <!-- Tailwind CSS (CDN Fallback) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Styles via Vite -->
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <style>
-             * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    @endif
 
+    <style>
         body {
             font-family: 'Instrument Sans', sans-serif;
-            background: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
         }
-
-        .login-container {
-            width: 100%;
-            max-width: 450px;
-            margin: 0 auto;
-        }
-
-        .login-card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid #f0f0f0;
-        }
-
-        .logo-container {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            font-size: 42px;
-            font-weight: 700;
-            letter-spacing: -1px;
-        }
-
-        .logo-red {
-            color: #DC2626;
-        }
-
-        .logo-black {
-            color: #000000;
-        }
-
-        .logo-subtitle {
-            color: #6B7280;
-            font-size: 14px;
-            margin-top: 8px;
-            font-weight: 400;
-        }
-
-        .login-title {
-            font-size: 28px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .login-subtitle {
-            text-align: center;
-            color: #6B7280;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .alert-error {
-            background-color: #FEE2E2;
-            border: 1px solid #FECACA;
-            color: #991B1B;
-        }
-
-        .alert ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .alert li {
-            margin: 4px 0;
-        }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 15px;
-            border: 2px solid #E5E7EB;
-            border-radius: 8px;
-            outline: none;
-            transition: all 0.3s ease;
-            font-family: 'Instrument Sans', sans-serif;
-            background: #ffffff;
-        }
-
-        .form-input:focus {
-            border-color: #DC2626;
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-        }
-
-        .form-input.is-invalid {
-            border-color: #EF4444;
-        }
-
-        .error-message {
-            color: #DC2626;
-            font-size: 13px;
-            margin-top: 6px;
-            display: block;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #ffffff;
-            background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Instrument Sans', sans-serif;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-        }
-
-        .btn:hover {
-            background: linear-gradient(135deg, #B91C1C 0%, #7F1D1D 100%);
-            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
-            transform: translateY(-2px);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
-        }
-
-        .forgot-password {
-            text-align: center;
-            margin-top: 16px;
-        }
-
-        .forgot-password a {
-            color: #DC2626;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .forgot-password a:hover {
-            color: #991B1B;
-            text-decoration: underline;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 576px) {
-            .login-card {
-                padding: 30px 24px;
-                border-radius: 12px;
-            }
-
-            .logo {
-                font-size: 36px;
-            }
-
-            .login-title {
-                font-size: 24px;
-            }
-
-            .form-input {
-                padding: 11px 14px;
-                font-size: 14px;
-            }
-
-            .btn {
-                padding: 12px 20px;
-                font-size: 15px;
-            }
-        }
-
-        @media (max-width: 400px) {
-            body {
-                padding: 15px;
-            }
-
-            .login-card {
-                padding: 24px 20px;
-            }
-
-            .logo {
-                font-size: 32px;
-            }
-
-            .login-title {
-                font-size: 22px;
-            }
-        }
-
-        /* Tablet landscape and small desktops */
-        @media (min-width: 768px) and (max-width: 1024px) {
-            .login-container {
-                max-width: 480px;
-            }
-        }
-
-        /* Large screens */
-        @media (min-width: 1440px) {
-            .login-container {
-                max-width: 500px;
-            }
-
-            .login-card {
-                padding: 50px;
-            }
-        }
-
-        /* Animation for form */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .login-card {
-            animation: slideIn 0.5s ease-out;
-        }
-        </style>
-    @endif
+    </style>
 </head>
-<body>
-    <div class="login-container">
-        <div class="login-card">
-            <h2 class="login-title">Admin Login</h2>
+<body class="bg-white min-h-screen flex items-center justify-center p-4 sm:p-5">
+
+    <div class="w-full max-width-[450px] max-w-md mx-auto">
+        <div class="bg-white rounded-2xl p-6 sm:p-10 shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 transition-all duration-300">
+            
+            <h2 class="text-2xl sm:text-3xl font-semibold text-gray-900 text-center mb-6 sm:mb-8">Admin Login</h2>
             
             @if ($errors->any())
-                <div class="alert alert-error">
-                    <ul>
+                <div class="bg-red-100 border border-red-200 text-red-800 p-3 sm:p-4 rounded-lg mb-5 text-sm">
+                    <ul class="list-none m-0 p-0">
                         @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
+                            <li class="my-1">{{ $error }}</li>
                         @endforeach
                     </ul>
                 </div>
             @endif
             
             @if (session('error'))
-                <div class="alert alert-error">
+                <div class="bg-red-100 border border-red-200 text-red-800 p-3 sm:p-4 rounded-lg mb-5 text-sm">
                     {{ session('error') }}
                 </div>
             @endif
@@ -296,12 +49,13 @@
             <form method="POST" action="{{ route('admin.login') }}">
                 @csrf
                 
-                <div class="form-group">
-                    <label for="email" class="form-label">Email Address</label>
+                <!-- Email Address -->
+                <div class="mb-6">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                     <input 
                         id="email" 
                         type="email" 
-                        class="form-input @error('email') is-invalid @enderror" 
+                        class="w-full px-4 py-3 text-base border-2 rounded-lg outline-none transition-all duration-300 bg-white text-gray-900 focus:border-red-600 focus:ring-2 focus:ring-red-600/10 @error('email') border-red-500 @else border-gray-200 @enderror" 
                         name="email" 
                         value="{{ old('email') }}" 
                         required 
@@ -309,32 +63,69 @@
                         autofocus
                     >
                     @error('email')
-                        <div class="error-message">{{ $message }}</div>
+                        <span class="text-red-600 text-xs mt-1.5 block">{{ $message }}</span>
                     @enderror
                 </div>
                 
-                <div class="form-group">
-                    <label for="password" class="form-label">Password</label>
-                    <input 
-                        id="password" 
-                        type="password" 
-                        class="form-input @error('password') is-invalid @enderror" 
-                        name="password" 
-                        required 
-                        autocomplete="current-password"
-                    >
+                <!-- Password with Toggle -->
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <div class="relative">
+                        <input 
+                            id="password" 
+                            type="password" 
+                            class="w-full pl-4 pr-10 py-3 text-base border-2 rounded-lg outline-none transition-all duration-300 bg-white text-gray-900 focus:border-red-600 focus:ring-2 focus:ring-red-600/10 @error('password') border-red-500 @else border-gray-200 @enderror" 
+                            name="password" 
+                            required 
+                            autocomplete="current-password"
+                        >
+                        <!-- Show / Hide Button -->
+                        <button type="button" id="togglePassword" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-0 cursor-pointer p-0 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none">
+                            <!-- Eye Icon -->
+                            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <!-- Eye Slash Icon -->
+                            <svg id="eyeSlashIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.02 10.02 0 013.98-.863c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m-3.123 3.123L2.22 2.22l19.56 19.56" />
+                            </svg>
+                        </button>
+                    </div>
                     @error('password')
-                        <div class="error-message">{{ $message }}</div>
+                        <span class="text-red-600 text-xs mt-1.5 block">{{ $message }}</span>
                     @enderror
                 </div>
                 
-                <div class="form-group">
-                    <button type="submit" class="btn">
+                <!-- Submit Button -->
+                <div class="mb-2">
+                    <button type="submit" class="w-full py-3.5 px-6 text-base font-semibold text-white bg-gradient-to-r from-red-600 to-red-800 rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:from-red-700 hover:to-red-900 hover:shadow-[0_6px_16px_rgba(220,38,38,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[0_2px_8px_rgba(220,38,38,0.3)]">
                         Login
                     </button>
                 </div>
             </form>
+
         </div>
     </div>
+
+    <!-- Password Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            const eyeSlashIcon = document.getElementById('eyeSlashIcon');
+
+            if (togglePassword && passwordInput) {
+                togglePassword.addEventListener('click', function () {
+                    const isPassword = passwordInput.getAttribute('type') === 'password';
+                    passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+
+                    eyeIcon.classList.toggle('hidden', isPassword);
+                    eyeSlashIcon.classList.toggle('hidden', !isPassword);
+                });
+            }
+        });
+    </script>
 </body>
 </html>

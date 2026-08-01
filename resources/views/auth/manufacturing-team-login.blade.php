@@ -6,9 +6,12 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Manufacturing Team Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons for Eye / Eye-Slash SVGs -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         .login-card { max-width: 420px; margin: 80px auto; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .hidden { display: none; }
+        .toggle-password { cursor: pointer; }
     </style>
 </head>
 <body class="bg-light">
@@ -31,8 +34,13 @@
         <!-- STEP 2A: Password Login (Returning Users) -->
         <form id="step-password-form" class="hidden">
             <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="login_password" name="password" placeholder="Enter your password" required>
+                <label for="login_password" class="form-label">Password</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="login_password" name="password" placeholder="Enter your password" required>
+                    <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#login_password">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn btn-success w-100" id="btn-login-pass">Login</button>
             <button type="button" class="btn btn-link w-100 mt-2 btn-back">Back</button>
@@ -46,11 +54,21 @@
             </div>
             <div class="mb-3">
                 <label for="new_password" class="form-label">Set New Password</label>
-                <input type="password" class="form-control" id="new_password" name="password" placeholder="Minimum 6 characters" required>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="new_password" name="password" placeholder="Minimum 6 characters" required>
+                    <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#new_password">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
             </div>
             <div class="mb-3">
                 <label for="password_confirmation" class="form-label">Confirm Password</label>
-                <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" placeholder="Re-enter password" required>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" placeholder="Re-enter password" required>
+                    <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#password_confirmation">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary w-100" id="btn-verify-otp">Set Password & Login</button>
             <button type="button" class="btn btn-link w-100 mt-2 btn-back">Back</button>
@@ -70,6 +88,20 @@
         $('#alert-message').removeClass('hidden alert-danger alert-success')
             .addClass('alert-' + type).text(msg);
     }
+
+    // Toggle Password Visibility
+    $(document).on('click', '.toggle-password', function() {
+        const inputTarget = $($(this).data('target'));
+        const icon = $(this).find('i');
+        
+        if (inputTarget.attr('type') === 'password') {
+            inputTarget.attr('type', 'text');
+            icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            inputTarget.attr('type', 'password');
+            icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+    });
 
     // Step 1: Check Phone
     $('#step-phone-form').on('submit', function(e) {

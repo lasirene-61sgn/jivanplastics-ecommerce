@@ -43,18 +43,18 @@
                 <div class="p-8 grid grid-cols-1 sm:grid-cols-2 gap-8">
                     <div class="space-y-6">
                         <div>
-                            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Customer Profile</p>
+                            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Customer Name</p>
                             <p class="text-lg font-black text-slate-900">{{ $returnRequest->customer->name }}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Order Link</p>
+                            <!-- <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Order Link</p>
                             @if($returnRequest->order)
                                 <a href="{{ route('admin.orders.show', $returnRequest->order) }}" class="text-sm font-black text-indigo-600 underline">
                                     Order #{{ $returnRequest->order->order_number }}
                                 </a>
                             @else
                                 <span class="text-sm font-black text-slate-400 italic">No Order (Direct)</span>
-                            @endif
+                            @endif -->
                         </div>
                     </div>
                     <div class="space-y-6">
@@ -63,9 +63,9 @@
                             <p class="text-sm font-black text-slate-700 uppercase italic">{{ $returnRequest->type }}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Impacted Quantity</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pieces</p>
                             <div class="flex gap-2">
-                                <span class="px-3 py-1 bg-slate-900 text-white rounded-lg font-black text-xs">{{ $returnRequest->quantity }} Units</span>
+                                <!-- <span class="px-3 py-1 bg-slate-900 text-white rounded-lg font-black text-xs">{{ $returnRequest->quantity }} Units</span> -->
                                 @if($returnRequest->pieces > 0)
                                     <span class="px-3 py-1 bg-indigo-600 text-white rounded-lg font-black text-xs">{{ $returnRequest->pieces }} Pieces</span>
                                 @endif
@@ -225,7 +225,7 @@
 
         <div class="space-y-8">
             <div class="bg-slate-900 rounded-3xl p-8 text-white shadow-xl">
-                <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 italic">Workflow Status</h3>
+                <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 italic">Work Status</h3>
                 <div class="flex flex-col items-center justify-center py-4">
                     @php
                         $manColor = match($returnRequest->status) {
@@ -399,7 +399,7 @@
             </div>
             @endif
             @else
-                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
+                <!-- <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
                     @if($returnRequest->returnNote)
                     <div class="p-5 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between shadow-sm">
                         <div>
@@ -481,7 +481,7 @@
                             {{ $returnRequest->admin_notes ?? 'No internal audit notes were archived for this request.' }}
                         </div>
                     </div>
-                </div>
+                </div> -->
             @endif
         </div>
     </div>

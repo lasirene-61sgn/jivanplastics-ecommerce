@@ -90,7 +90,7 @@
                                 </th> -->
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Order Info</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Customer & Product</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Qty / Type</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Pieces</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Reason</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
@@ -170,7 +170,7 @@
                                     </td>
 
                                     <td class="px-6 py-4 text-center">
-                                        <div class="text-sm font-black text-slate-900">{{ $request->quantity }} units</div>
+                                        <!-- <div class="text-sm font-black text-slate-900">{{ $request->quantity }} units</div> -->
                                         @if($request->pieces > 0)
                                             <div class="text-sm font-black text-slate-900 mt-1">{{ $request->pieces }} pieces</div>
                                         @endif

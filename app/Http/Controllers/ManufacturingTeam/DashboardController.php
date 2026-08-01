@@ -476,6 +476,35 @@ class DashboardController extends Controller
     }
 
     /**
+     * Display the dedicated return requests page.
+     */
+    public function returnsIndex(Request $request)
+    {
+        $manufacturingTeam = Auth::guard('manufacturing-team')->user();
+
+        $perPage = $request->get('per_page', 20);
+        if (!in_array($perPage, [10, 20, 30, 100])) {
+            $perPage = 20;
+        }
+
+        $returnRequests = \App\Models\ReturnRequest::with(['order', 'orderItem.product', 'product'])
+            ->where(function($q) use ($manufacturingTeam) {
+                $q->where('manufacturing_team_id', $manufacturingTeam->id)
+                  ->orWhereHas('order', function($q2) use ($manufacturingTeam) {
+                      $q2->where('manufacturing_team_id', $manufacturingTeam->id);
+                  });
+            })
+            ->latest()
+            ->paginate($perPage);
+
+        $returnRequests->appends(['per_page' => $perPage]);
+
+        $returnRequestsCount = $returnRequests->total();
+
+        return view('manufacturing-team.return-requests.index', compact('manufacturingTeam', 'returnRequests', 'returnRequestsCount', 'perPage'));
+    }
+
+    /**
      * Show the form for creating a new return request.
      */
     public function createReturnRequest()
@@ -536,6 +565,6 @@ class DashboardController extends Controller
             return redirect()->back()->with('error', 'Please provide valid return quantities or pieces for the selected products.');
         }
 
-        return redirect()->route('manufacturing-team.dashboard', ['tab' => 'returns'])->with('success', 'Return request created successfully.');
+        return redirect()->route('manufacturing-team.returns.index')->with('success', 'Return request created successfully.');
     }
 }

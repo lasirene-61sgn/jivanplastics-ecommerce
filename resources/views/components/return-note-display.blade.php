@@ -99,7 +99,7 @@
                     <tr class="bg-slate-50/80 border-b border-slate-200">
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Product Description</th>
                         <!-- <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">Rate</th> -->
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">Returned Qty</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">Returned Pcs</th>
                         <!-- <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right whitespace-nowrap">Line Total</th> -->
                     </tr>
                 </thead>
@@ -134,10 +134,10 @@
                             </td> -->
                             <td class="px-6 py-5 text-center">
                                 <div class="inline-flex flex-col items-center">
-                                    <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-sm">
+                                    <!-- <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-sm">
                                         <span class="text-xs font-black">{{ $item->quantity }}</span>
                                         <span class="text-[9px] font-black uppercase text-indigo-400 ml-1">Units</span>
-                                    </div>
+                                    </div> -->
                                     @if($item->pieces > 0)
                                     <span class="text-[9px] font-black text-slate-500 mt-1 uppercase tracking-widest italic bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                                         + {{ $item->pieces }} pieces

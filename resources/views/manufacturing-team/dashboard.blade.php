@@ -143,11 +143,23 @@
                 </div>
                 <div>
                     <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pending Orders</span>
-                    <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ $orders->where('manufacturing_status', 'allocated')->count() }}</span>
+                    <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ $allocatedCount }}</span>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6 lg:col-span-2">
+            <a href="{{ route('manufacturing-team.returns.index') }}" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6 hover:border-rose-300 hover:shadow-md transition-all duration-300 group">
+                <div class="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 group-hover:bg-rose-100 transition-colors">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                </div>
+                <div>
+                    <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Return Requests</span>
+                    <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ $returnRequestsCount }}</span>
+                </div>
+            </a>
+
+            <!-- <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6 lg:col-span-2">
                 <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shrink-0">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -158,7 +170,7 @@
                     <span class="text-lg font-black text-slate-900 tracking-tight block">{{ $manufacturingTeam->contact_person }}</span>
                     <span class="text-xs text-slate-500 font-medium">{{ $manufacturingTeam->phone }}</span>
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-10">
@@ -184,8 +196,8 @@
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage production cycles</p>
                         </div>
 
-                        <div class="flex items-center gap-3">
-                            <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'returns']) }}" class="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                        <!-- <div class="flex items-center gap-3">
+                            <a href="{{ route('manufacturing-team.returns.index') }}" class="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                                 </svg>
@@ -197,7 +209,7 @@
                             <span x-show="selectedCount > 0" x-cloak class="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black border border-slate-100 uppercase tracking-widest">
                                 <span x-text="selectedCount"></span> Selected
                             </span>
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- Tabs Section -->
@@ -216,111 +228,7 @@
                         </a>
                     </div>
 
-                    @if($tab === 'returns')
-                        <div class="px-8 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
-                            <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest">Return Requests Directory</h4>
-                            <a href="{{ route('manufacturing-team.returns.create') }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                Create Request
-                            </a>
-                        </div>
-                        @if($returnRequests->count() > 0)
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50/30">
-                                            <th class="py-5 px-8 font-black">Order Ref</th>
-                                            <th class="py-5 px-4 font-black">Product</th>
-                                            <th class="py-5 px-4 font-black">Qty / Pieces</th>
-                                            <!-- <th class="py-5 px-4 font-black text-center">Status</th> -->
-                                            <!-- <th class="py-5 px-8 text-right font-black">Actions</th> -->
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-50">
-                                        @foreach($returnRequests as $return)
-                                        <tr class="group hover:bg-slate-50/50 transition-colors">
-                                            <td class="py-6 px-8">
-                                                <div class="flex flex-col">
-                                                    @if($return->order)
-                                                        <span class="text-sm font-black text-slate-900 tracking-tight">#{{ $return->order->order_number }}</span>
-                                                    @elseif($return->request_number)
-                                                        <span class="text-sm font-black text-rose-600 tracking-tight">{{ $return->request_number }}</span>
-                                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Mfg Direct</span>
-                                                    @else
-                                                        <span class="text-sm font-black text-slate-500 tracking-tight italic">Direct</span>
-                                                    @endif
-                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{{ $return->created_at->format('d M, Y') }}</span>
-                                                </div>
-                                            </td>
-                                            <td class="py-6 px-4">
-                                                <div class="flex flex-col">
-                                                    @if($return->orderItem)
-                                                        <span class="text-sm font-black text-slate-900 tracking-tight">{{ $return->orderItem->product_name }}</span>
-                                                    @elseif($return->product)
-                                                        <span class="text-sm font-black text-slate-900 tracking-tight">{{ $return->product->name }}</span>
-                                                    @else
-                                                        <span class="text-sm font-black text-slate-500 tracking-tight">N/A</span>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td class="py-6 px-4">
-                                                <span class="text-xs font-black text-slate-700 tracking-tight">{{ $return->quantity }} units / {{ $return->pieces }} pcs</span>
-                                            </td>
-                                            <!-- <td class="py-6 px-4 text-center">
-                                                @php
-                                                $statusColors = [
-                                                'pending' => 'bg-amber-50 text-amber-600 border-amber-100',
-                                                'processing' => 'bg-blue-50 text-blue-600 border-blue-100',
-                                                'completed' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                                                'rejected' => 'bg-rose-50 text-rose-600 border-rose-100',
-                                                ];
-                                                $colorClass = $statusColors[$return->status] ?? 'bg-slate-50 text-slate-600 border-slate-100';
-                                                @endphp
-                                                <span class="px-3 py-1 rounded-lg border {{ $colorClass }} text-[10px] font-black uppercase tracking-widest">
-                                                    {{ $return->status }}
-                                                </span>
-                                            </td> -->
-                                            <!-- <td class="py-6 px-8 text-right">
-                                                @if($return->status == 'pending' || $return->status == 'processing')
-                                                <form action="{{ route('manufacturing-team.returns.status', $return) }}" method="POST" class="inline-flex items-center gap-2">
-                                                    @csrf @method('PUT')
-                                                    <select name="status" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:border-rose-500 outline-none">
-                                                        <option value="processing" {{ $return->status == 'processing' ? 'selected' : '' }}>Processing</option>
-                                                        <option value="completed" {{ $return->status == 'completed' ? 'selected' : '' }}>Completed</option>
-                                                    </select>
-                                                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">Update</button>
-                                                </form>
-                                                @endif
-                                            </td> -->
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="p-8 bg-slate-50/30 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Show</span>
-                                    <select onchange="window.location.href = this.value" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-rose-500">
-                                        @foreach([10, 20, 30, 100] as $size)
-                                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => 1]) }}" {{ request()->get('per_page', 20) == $size ? 'selected' : '' }}>{{ $size }} per page</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="flex-1 sm:flex-none">
-                                    {{ $returnRequests->links() }}
-                                </div>
-                            </div>
-                        @else
-                            <div class="p-20 text-center">
-                                <div class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-300 mx-auto mb-6">
-                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                    </svg>
-                                </div>
-                                <h4 class="text-xl font-black text-slate-900 uppercase tracking-tight">No Return Requests</h4>
-                                <p class="text-slate-400 text-sm mt-2">You don't have any pending return requests.</p>
-                            </div>
-                        @endif
+                    @if(false) {{-- returns tab removed; returns now on dedicated page --}}
                     @else
                     @if($orders->count() > 0)
                     <form id="bulkActionForm" method="POST" class="p-0 m-0">
@@ -469,7 +377,7 @@
                 <!-- Team Card -->
                 <div class="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-slate-200">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-rose-600/30 blur-[60px] rounded-full"></div>
-                    <div class="relative z-10 font-black tracking-tight text-3xl mb-8 uppercase">Unit <span class="text-rose-500">Specs</span></div>
+                    <!-- <div class="relative z-10 font-black tracking-tight text-3xl mb-8 uppercase">Unit <span class="text-rose-500">Specs</span></div> -->
 
                     <div class="space-y-6 relative z-10">
                         <div class="flex items-center gap-4 group">

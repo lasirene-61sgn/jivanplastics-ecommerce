@@ -48,15 +48,43 @@
                     @error('phone') <p class="text-xs text-red-500 font-medium">{{ $message }}</p> @enderror
                 </div>
 
+                <!-- Password Input -->
                 <div class="space-y-2">
-                    <label for="password" class="text-sm font-semibold text-slate-700">Password </label>
-                    <input type="password" name="password" id="password" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                    <label for="password" class="text-sm font-semibold text-slate-700">Password</label>
+                    <div class="relative">
+                        <input type="password" name="password" id="password" class="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                        <button type="button" id="togglePassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                            <!-- Eye Icon -->
+                            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <!-- Eye Slash Icon -->
+                            <svg id="eyeSlashIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.02 10.02 0 013.98-.863c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m-3.123 3.123L2.22 2.22l19.56 19.56" />
+                            </svg>
+                        </button>
+                    </div>
                     @error('password') <p class="text-xs text-red-500 font-medium">{{ $message }}</p> @enderror
                 </div>
 
+                <!-- Confirm Password Input -->
                 <div class="space-y-2">
-                    <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirm Password </label>
-                    <input type="password" name="password_confirmation" id="password_confirmation" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all>
+                    <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirm Password</label>
+                    <div class="relative">
+                        <input type="password" name="password_confirmation" id="password_confirmation" class="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                        <button type="button" id="togglePasswordConfirmation" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                            <!-- Eye Icon -->
+                            <svg id="eyeIconConfirmation" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <!-- Eye Slash Icon -->
+                            <svg id="eyeSlashIconConfirmation" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.02 10.02 0 013.98-.863c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m-3.123 3.123L2.22 2.22l19.56 19.56" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -88,4 +116,32 @@
         </form>
     </div>
 </div>
+
+<!-- Password Toggle Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function setupPasswordToggle(btnId, inputId, eyeId, eyeSlashId) {
+            const button = document.getElementById(btnId);
+            const input = document.getElementById(inputId);
+            const eye = document.getElementById(eyeId);
+            const eyeSlash = document.getElementById(eyeSlashId);
+
+            if (button && input && eye && eyeSlash) {
+                button.addEventListener('click', function () {
+                    const isPassword = input.getAttribute('type') === 'password';
+                    input.setAttribute('type', isPassword ? 'text' : 'password');
+
+                    eye.classList.toggle('hidden', isPassword);
+                    eyeSlash.classList.toggle('hidden', !isPassword);
+                });
+            }
+        }
+
+        // Toggle for Password
+        setupPasswordToggle('togglePassword', 'password', 'eyeIcon', 'eyeSlashIcon');
+
+        // Toggle for Confirm Password
+        setupPasswordToggle('togglePasswordConfirmation', 'password_confirmation', 'eyeIconConfirmation', 'eyeSlashIconConfirmation');
+    });
+</script>
 @endsection
