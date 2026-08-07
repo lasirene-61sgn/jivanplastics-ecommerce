@@ -363,6 +363,12 @@
                                         if ({{ count($productThicknesses) > 0 ? 'true' : 'false' }} && !this.selectedThickness) return false;
                                         if ({{ count($productColors) > 0 ? 'true' : 'false' }} && !this.selectedColor) return false;
                                         return true;
+                                    },
+                                    get gstPercentage() {
+                                        if (this.activeVariation && this.activeVariation.gst_percentage !== null && this.activeVariation.gst_percentage !== undefined) {
+                                            return parseFloat(this.activeVariation.gst_percentage) || 0;
+                                        }
+                                        return {{ (float)($product->gst_percentage ?? 0) }};
                                     }
                                 }">
                         <div class="flex flex-col mb-4">
@@ -460,12 +466,12 @@
                                  <div class="flex justify-between items-end mt-2 pt-2 border-t border-slate-200/30">
                                     <div class="flex flex-col gap-2">
                                         <div>
-                                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Tax (GST {{ $product->gst_percentage }}%)</p>
-                                            <p class="text-xs font-bold text-slate-600 tracking-tight">+ ₹<span x-text="(total * {{ $product->gst_percentage / 100 }}).toFixed(2)"></span></p>
+                                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Tax (GST <span x-text="gstPercentage"></span>%)</p>
+                                            <p class="text-xs font-bold text-slate-600 tracking-tight">+ ₹<span x-text="(total * (gstPercentage / 100)).toFixed(2)"></span></p>
                                         </div>
                                         <div>
                                             <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Net Total (Incl. GST)</p>
-                                            <p class="text-xl font-black text-red-600 tracking-tighter">₹<span x-text="(parseFloat(total) + (total * {{ $product->gst_percentage / 100 }})).toFixed(2)"></span></p>
+                                            <p class="text-xl font-black text-red-600 tracking-tighter">₹<span x-text="(parseFloat(total) + (total * (gstPercentage / 100))).toFixed(2)"></span></p>
                                         </div>
                                     </div>
                                     <template x-if="totalSavings > 0">

@@ -7,7 +7,7 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
             <h2 class="text-3xl font-black text-slate-900 tracking-tight">Order <span class="text-indigo-600">#{{ $order->order_number }}</span></h2>
-            <p class="text-sm text-slate-500 font-medium">Placed on {{ $order->created_at->format('M d, Y H:i') }}</p>
+            <p class="text-sm text-slate-500 font-medium">Placed on {{ $order->created_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</p>
         </div>
         <a href="{{ route('admin.orders.index') }}" class="inline-flex items-center px-6 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-all active:scale-95">
             <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,7 +342,7 @@
                             <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                             <div class="flex-1">
                                 <p class="text-sm font-black text-amber-700">⚠️ Manufacturing Team Requests Edit Permission</p>
-                                <p class="text-xs text-amber-600 font-bold mt-1">{{ $order->mfg_edit_request_at?->format('M d, Y H:i') }}</p>
+                                <p class="text-xs text-amber-600 font-bold mt-1">{{ $order->mfg_edit_request_at?->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</p>
                                 <div class="mt-2 p-3 bg-white rounded-xl border border-amber-200 text-sm text-slate-700 italic font-medium">
                                     "{{ $order->mfg_edit_request_note }}"
                                 </div>
@@ -394,7 +394,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-xs font-bold text-slate-400 uppercase">Assigned At:</span>
-                                <span class="text-xs font-bold text-slate-600">{{ $order->allocated_at ? $order->allocated_at->format('M d, Y H:i') : 'N/A' }}</span>
+                                <span class="text-xs font-bold text-slate-600">{{ $order->allocated_at ? $order->allocated_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') : 'N/A' }}</span>
                             </div>
                         </div>
                         @else
@@ -414,7 +414,7 @@
                                 <li class="relative pl-2 leading-relaxed">
                                     <span class="absolute -left-[31px] top-1 w-3 h-3 bg-indigo-500 rounded-full ring-4 ring-white"></span>
                                     <span class="text-slate-700 break-words">
-                                        Allocated: {{ $order->allocated_at->format('M d, Y H:i') }}
+                                        Allocated: {{ $order->allocated_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                                     </span>
                                 </li>
                                 @endif
@@ -423,7 +423,7 @@
                                 <li class="relative pl-2 leading-relaxed">
                                     <span class="absolute -left-[31px] top-1 w-3 h-3 bg-amber-500 rounded-full ring-4 ring-white"></span>
                                     <span class="text-slate-700 break-words">
-                                        Assembly Started: {{ $order->allocated_at->format('M d, Y H:i') }}
+                                        Assembly Started: {{ $order->allocated_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                                     </span>
                                 </li>
                                 @endif
@@ -432,7 +432,7 @@
                                 <li class="relative pl-2 leading-relaxed">
                                     <span class="absolute -left-[31px] top-1 w-3 h-3 bg-green-500 rounded-full ring-4 ring-white"></span>
                                     <span class="text-slate-700 break-words">
-                                        Production Finished: {{ $order->completed_at->format('M d, Y H:i') }}
+                                        Production Finished: {{ $order->completed_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                                     </span>
                                 </li>
                                 @endif
@@ -441,7 +441,7 @@
                                 <li class="relative pl-2 leading-relaxed">
                                     <span class="absolute -left-[31px] top-1 w-3 h-3 bg-blue-500 rounded-full ring-4 ring-white"></span>
                                     <span class="text-slate-700 break-words">
-                                        Logistics Handover: {{ $order->dispatched_at->format('M d, Y H:i') }}
+                                        Logistics Handover: {{ $order->dispatched_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                                     </span>
                                 </li>
                                 @endif
@@ -515,7 +515,7 @@
                                         </div>
                                         <div>
                                             <span class="text-xs font-black text-indigo-900 block">{{ $invoice->invoice_number }}</span>
-                                            <span class="text-[10px] font-bold text-indigo-500 block">{{ $invoice->created_at->format('M d, Y H:i') }}</span>
+                                            <span class="text-[10px] font-bold text-indigo-500 block">{{ $invoice->created_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</span>
                                         </div>
                                     </div>
                                     <span class="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">

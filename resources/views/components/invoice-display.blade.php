@@ -24,9 +24,9 @@
                     <span class="flex items-center">
                         <svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         @if(isset($invoice))
-                            {{ $invoice->created_at->format('M d, Y H:i') }}
+                            {{ $invoice->created_at->timezone('Asia/Kolkata')->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                         @elseif($displayOrder)
-                            {{ $displayOrder->created_at->format('M d, Y H:i') }}
+                            {{ $displayOrder->created_at->timezone('Asia/Kolkata')->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                         @endif
                     </span>
                     <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
@@ -38,7 +38,7 @@
                 @if($displayOrder && $displayOrder->tentative_dispatch_date)
                 <div class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg">
                     <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <span class="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Tentative Dispatch: {{ \Carbon\Carbon::parse($displayOrder->tentative_dispatch_date)->format('M d, Y') }}</span>
+                    <span class="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Tentative Dispatch: {{ \Carbon\Carbon::parse($displayOrder->tentative_dispatch_date)->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</span>
                 </div>
                 @endif
             </div>
@@ -148,9 +148,9 @@
                     <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</span>
                     <span class="text-xs font-black text-slate-900">
                         @if(isset($invoice))
-                            {{ $invoice->created_at->format('M d, Y') }}
+                            {{ $invoice->created_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                         @elseif($displayOrder)
-                            {{ $displayOrder->created_at->format('M d, Y') }}
+                            {{ $displayOrder->created_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}
                         @else
                             N/A
                         @endif

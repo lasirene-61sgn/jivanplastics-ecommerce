@@ -35,7 +35,7 @@
 
         <div class="stat-card group relative overflow-hidden">
             <div class="relative z-10">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Pipeline</p>
+                <!-- <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Pipeline</p> -->
                 <h3 class="text-4xl font-black text-amber-500 italic">{{ sprintf('%02d', $pendingOrders) }}</h3>
                 <div class="mt-4 flex items-center text-xs font-bold text-amber-600">
                     <span class="bg-amber-50 px-2 py-1 rounded">Pending Processing</span>

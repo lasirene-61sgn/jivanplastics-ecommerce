@@ -37,7 +37,7 @@ class B2BDashboardController extends Controller
         $totalProducts = Product::where('is_active', true)->count();
         $recentProducts = Product::where('is_active', true)->with('images')->latest()->take(5)->get();
         $totalOrders = Order::where('customer_id', $customer->id)->count();
-        $pendingOrders = Order::where('customer_id', $customer->id)->where('status', 'pending')->count();
+        $pendingOrders = Order::where('customer_id', $customer->id)->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->count();
         $completedOrders = Order::where('customer_id', $customer->id)->where('status', 'completed')->count();
 
         return view('frontend.b2b.dashboard', compact('customer', 'totalProducts', 'recentProducts', 'totalOrders', 'pendingOrders', 'completedOrders'));
