@@ -45,7 +45,7 @@ class ProductController extends Controller
         $products = $query->latest()->paginate($perPage)->appends($request->all());
 
         $categories = Category::all();
-        
+
         // Pass subcategories and subSubcategories if a category is selected to retain dropdown state
         $subcategories = [];
         $subSubcategories = [];
@@ -80,95 +80,99 @@ class ProductController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        'variations' => 'required|array|min:1',
-        // Attributes are nullable to support different product types
-        'variations.*.size' => 'nullable|string',
-        'variations.*.thickness' => 'nullable|string',
-        'variations.*.color' => 'nullable|string',
-        'variations.*.piece_price' => 'required|numeric|min:0',
-        'variations.*.total_pieces' => 'required|integer|min:1',
-        'variations.*.gst_percentage' => 'nullable|numeric|min:0|max:100',
-    ]);
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'variations' => 'required|array|min:1',
+            // Attributes are nullable to support different product types
+            'variations.*.size' => 'nullable|string',
+            'variations.*.thickness' => 'nullable|string',
+            'variations.*.color' => 'nullable|string',
+            'variations.*.piece_price' => 'required|numeric|min:0',
+            'variations.*.total_pieces' => 'required|integer|min:1',
+            'variations.*.gst_percentage' => 'nullable|numeric|min:0|max:100',
+        ]);
 
-    // Create the Main Product
-    $product = Product::create($request->only([
-        'name', 'description', 'category_id', 'subcategory_id', 
-        'sub_subcategory_id', 'is_active'
-    ]));
+        // Create the Main Product
+        $product = Product::create($request->only([
+            'name',
+            'description',
+            'category_id',
+            'subcategory_id',
+            'sub_subcategory_id',
+            'is_active'
+        ]));
 
-    // Loop through variations
-    $sizes = [];
-    $thicknesses = [];
-    $colors = [];
+        // Loop through variations
+        $sizes = [];
+        $thicknesses = [];
+        $colors = [];
 
-    if ($request->has('variations')) {
-        foreach ($request->variations as $item) {
-            $piecePrice = $item['piece_price'] ?? 0;
-            $totalPieces = $item['total_pieces'] ?? 1;
-            $gstPercent = $item['gst_percentage'] ?? 0;
+        if ($request->has('variations')) {
+            foreach ($request->variations as $item) {
+                $piecePrice = $item['piece_price'] ?? 0;
+                $totalPieces = $item['total_pieces'] ?? 1;
+                $gstPercent = $item['gst_percentage'] ?? 0;
 
-            // Collect unique attributes
-            if (!empty($item['size'])) $sizes[] = trim($item['size']);
-            if (!empty($item['thickness'])) $thicknesses[] = trim($item['thickness']);
-            if (!empty($item['color'])) $colors[] = trim($item['color']);
+                // Collect unique attributes
+                if (!empty($item['size'])) $sizes[] = trim($item['size']);
+                if (!empty($item['thickness'])) $thicknesses[] = trim($item['thickness']);
+                if (!empty($item['color'])) $colors[] = trim($item['color']);
 
-            // Math Logic
-            $subtotal = $piecePrice * $totalPieces;
-            $gstAmount = $subtotal * ($gstPercent / 100);
-            $totalWithGst = $subtotal + $gstAmount;
+                // Math Logic
+                $subtotal = $piecePrice * $totalPieces;
+                $gstAmount = $subtotal * ($gstPercent / 100);
+                $totalWithGst = $subtotal + $gstAmount;
 
-            $product->variations()->create([
-                'size' => $item['size'] ?? null,
-                'thickness' => $item['thickness'] ?? null,
-                'color' => $item['color'] ?? null,
-                'piece_price' => $piecePrice,
-                'total_pieces' => $totalPieces,
-                'gst_percentage' => $gstPercent,
-                'total_price' => $totalWithGst,
-            ]);
-        }
-    }
-
-    // Update main product attributes
-    $firstVariation = $product->variations()->first();
-    $product->update([
-        'size' => implode(',', array_unique($sizes)),
-        'thickness' => implode(',', array_unique($thicknesses)),
-        'color' => implode(',', array_unique($colors)),
-        'per_quantity_pieces' => $firstVariation->total_pieces ?? 1,
-        'piece_price' => $firstVariation->piece_price ?? 0,
-        // Store base price (without GST) as the main price
-        'price' => $firstVariation ? ($firstVariation->piece_price * $firstVariation->total_pieces) : 0,
-    ]);
-
-    // Handle Image Uploads
-    if ($request->hasFile('images')) {
-        foreach ($request->file('images') as $index => $image) {
-            $imagePath = $image->store('products', 'public');
-            ProductImage::create([
-                'product_id' => $product->id,
-                'image_path' => $imagePath,
-                'sort_order' => $index
-            ]);
-        }
-    }
-
-    // Handle Dealer Discounts
-    if ($request->has('dealer_discounts')) {
-        foreach ($request->dealer_discounts as $dealerId => $discount) {
-            if ($discount !== null && $discount >= 0) {
-                $product->dealerDiscounts()->updateOrCreate(
-                    ['customer_id' => $dealerId],
-                    ['discount_percentage' => $discount, 'is_active' => true]
-                );
+                $product->variations()->create([
+                    'size' => $item['size'] ?? null,
+                    'thickness' => $item['thickness'] ?? null,
+                    'color' => $item['color'] ?? null,
+                    'piece_price' => $piecePrice,
+                    'total_pieces' => $totalPieces,
+                    'gst_percentage' => $gstPercent,
+                    'total_price' => $totalWithGst,
+                ]);
             }
         }
-    }
+
+        // Update main product attributes
+        $firstVariation = $product->variations()->first();
+        $product->update([
+            'size' => implode(',', array_unique($sizes)),
+            'thickness' => implode(',', array_unique($thicknesses)),
+            'color' => implode(',', array_unique($colors)),
+            'per_quantity_pieces' => $firstVariation->total_pieces ?? 1,
+            'piece_price' => $firstVariation->piece_price ?? 0,
+            // Store base price (without GST) as the main price
+            'price' => $firstVariation ? ($firstVariation->piece_price * $firstVariation->total_pieces) : 0,
+        ]);
+
+        // Handle Image Uploads
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                $imagePath = $image->store('products', 'public');
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $imagePath,
+                    'sort_order' => $index
+                ]);
+            }
+        }
+
+        // Handle Dealer Discounts
+        if ($request->has('dealer_discounts')) {
+            foreach ($request->dealer_discounts as $dealerId => $discount) {
+                if ($discount !== null && $discount >= 0) {
+                    $product->dealerDiscounts()->updateOrCreate(
+                        ['customer_id' => $dealerId],
+                        ['discount_percentage' => $discount, 'is_active' => true]
+                    );
+                }
+            }
+        }
 
         ActivityLog::create([
             'admin_id' => Auth::guard('admin')->id(),
@@ -206,81 +210,81 @@ class ProductController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, Product $product)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'variations' => 'required|array|min:1',
-        'variations.*.piece_price' => 'required|numeric',
-        'variations.*.total_pieces' => 'required|integer',
-    ]);
-
-    // Update basic info
-    $product->update($request->only(['name', 'description', 'category_id', 'subcategory_id', 'sub_subcategory_id', 'is_active']));
-
-    // Sync Variations: Remove old and add new
-    $product->variations()->delete();
-
-    $sizes = [];
-    $thicknesses = [];
-    $colors = [];
-
-    foreach ($request->variations as $item) {
-        $subtotal = ($item['piece_price'] ?? 0) * ($item['total_pieces'] ?? 1);
-        $gstAmount = $subtotal * (($item['gst_percentage'] ?? 0) / 100);
-
-        // Collect unique attributes
-        if (!empty($item['size'])) $sizes[] = trim($item['size']);
-        if (!empty($item['thickness'])) $thicknesses[] = trim($item['thickness']);
-        if (!empty($item['color'])) $colors[] = trim($item['color']);
-
-        $product->variations()->create([
-            'size' => $item['size'] ?? null,
-            'thickness' => $item['thickness'] ?? null,
-            'color' => $item['color'] ?? null,
-            'piece_price' => $item['piece_price'],
-            'total_pieces' => $item['total_pieces'],
-            'gst_percentage' => $item['gst_percentage'] ?? 0,
-            'total_price' => $subtotal + $gstAmount,
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'variations' => 'required|array|min:1',
+            'variations.*.piece_price' => 'required|numeric',
+            'variations.*.total_pieces' => 'required|integer',
         ]);
-    }
 
-    // Update main product attributes
-    $firstVariation = $product->variations()->first();
-    $product->update([
-        'size' => implode(',', array_unique($sizes)),
-        'thickness' => implode(',', array_unique($thicknesses)),
-        'color' => implode(',', array_unique($colors)),
-        'per_quantity_pieces' => $firstVariation->total_pieces ?? 1,
-        'piece_price' => $firstVariation->piece_price ?? 0,
-        // Store base price (without GST) as the main price
-        'price' => $firstVariation ? ($firstVariation->piece_price * $firstVariation->total_pieces) : 0,
-    ]);
+        // Update basic info
+        $product->update($request->only(['name', 'description', 'category_id', 'subcategory_id', 'sub_subcategory_id', 'is_active']));
 
-    // Handle New Images
-    if ($request->hasFile('images')) {
-        foreach ($request->file('images') as $index => $image) {
-            $imagePath = $image->store('products', 'public');
-            ProductImage::create([
-                'product_id' => $product->id,
-                'image_path' => $imagePath,
-                'sort_order' => $index
+        // Sync Variations: Remove old and add new
+        $product->variations()->delete();
+
+        $sizes = [];
+        $thicknesses = [];
+        $colors = [];
+
+        foreach ($request->variations as $item) {
+            $subtotal = ($item['piece_price'] ?? 0) * ($item['total_pieces'] ?? 1);
+            $gstAmount = $subtotal * (($item['gst_percentage'] ?? 0) / 100);
+
+            // Collect unique attributes
+            if (!empty($item['size'])) $sizes[] = trim($item['size']);
+            if (!empty($item['thickness'])) $thicknesses[] = trim($item['thickness']);
+            if (!empty($item['color'])) $colors[] = trim($item['color']);
+
+            $product->variations()->create([
+                'size' => $item['size'] ?? null,
+                'thickness' => $item['thickness'] ?? null,
+                'color' => $item['color'] ?? null,
+                'piece_price' => $item['piece_price'],
+                'total_pieces' => $item['total_pieces'],
+                'gst_percentage' => $item['gst_percentage'] ?? 0,
+                'total_price' => $subtotal + $gstAmount,
             ]);
         }
-    }
 
-    // Dealer Discounts
-    if ($request->has('dealer_discounts')) {
-        foreach ($request->dealer_discounts as $dealerId => $discount) {
-            if ($discount !== null && $discount >= 0) {
-                $product->dealerDiscounts()->updateOrCreate(
-                    ['customer_id' => $dealerId],
-                    ['discount_percentage' => $discount, 'is_active' => true]
-                );
-            } else {
-                $product->dealerDiscounts()->where('customer_id', $dealerId)->delete();
+        // Update main product attributes
+        $firstVariation = $product->variations()->first();
+        $product->update([
+            'size' => implode(',', array_unique($sizes)),
+            'thickness' => implode(',', array_unique($thicknesses)),
+            'color' => implode(',', array_unique($colors)),
+            'per_quantity_pieces' => $firstVariation->total_pieces ?? 1,
+            'piece_price' => $firstVariation->piece_price ?? 0,
+            // Store base price (without GST) as the main price
+            'price' => $firstVariation ? ($firstVariation->piece_price * $firstVariation->total_pieces) : 0,
+        ]);
+
+        // Handle New Images
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                $imagePath = $image->store('products', 'public');
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $imagePath,
+                    'sort_order' => $index
+                ]);
             }
         }
-    }
+
+        // Dealer Discounts
+        if ($request->has('dealer_discounts')) {
+            foreach ($request->dealer_discounts as $dealerId => $discount) {
+                if ($discount !== null && $discount >= 0) {
+                    $product->dealerDiscounts()->updateOrCreate(
+                        ['customer_id' => $dealerId],
+                        ['discount_percentage' => $discount, 'is_active' => true]
+                    );
+                } else {
+                    $product->dealerDiscounts()->where('customer_id', $dealerId)->delete();
+                }
+            }
+        }
 
         ActivityLog::create([
             'admin_id' => Auth::guard('admin')->id(),
