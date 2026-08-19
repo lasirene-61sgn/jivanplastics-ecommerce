@@ -24,7 +24,14 @@ class CartController extends Controller
             $total += $item['price'] * $item['quantity'];
         }
         
-        return view('frontend.cart.index', compact('cart', 'total'));
+        $isB2B = false;
+        $authUser = Auth::user();
+        if ($authUser && isset($authUser->customer)) {
+            $customer = $authUser->customer;
+            $isB2B = $customer->customer_type === 'dealer';
+        }
+        
+        return view('frontend.cart.index', compact('cart', 'total', 'isB2B'));
     }
     
     /**
@@ -102,14 +109,22 @@ class CartController extends Controller
         if ($requestedQuantity < $minOrderQty) {
             $customerType = $isB2B ? 'B2B' : 'B2C';
             $unitStr = $isPieces ? 'pieces' : 'units';
-            return redirect()->back()->with('error', "{$customerType} minimum order quantity for {$product->name} is {$minOrderQty} {$unitStr}");
+            $msg = "{$customerType} minimum order quantity for {$product->name} is {$minOrderQty} {$unitStr}";
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg]);
+            }
+            return redirect()->back()->with('error', $msg);
         }
         
         // Validate Maximum Order Quantity
         if ($maxOrderQty && $requestedQuantity > $maxOrderQty) {
             $customerType = $isB2B ? 'B2B' : 'B2C';
             $unitStr = $isPieces ? 'pieces' : 'units';
-            return redirect()->back()->with('error', "{$customerType} maximum order quantity for {$product->name} is {$maxOrderQty} {$unitStr}");
+            $msg = "{$customerType} maximum order quantity for {$product->name} is {$maxOrderQty} {$unitStr}";
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg]);
+            }
+            return redirect()->back()->with('error', $msg);
         }
         
         if (isset($cart[$cartKey])) {
@@ -119,14 +134,22 @@ class CartController extends Controller
             if ($newQuantity < $minOrderQty) {
                 $customerType = $isB2B ? 'B2B' : 'B2C';
                 $unitStr = $isPieces ? 'pieces' : 'units';
-                return redirect()->back()->with('error', "{$customerType} minimum order quantity for {$product->name} is {$minOrderQty} {$unitStr}");
+                $msg = "{$customerType} minimum order quantity for {$product->name} is {$minOrderQty} {$unitStr}";
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg]);
+                }
+                return redirect()->back()->with('error', $msg);
             }
             
             // Re-validate maximum quantity when updating existing cart item
             if ($maxOrderQty && $newQuantity > $maxOrderQty) {
                 $customerType = $isB2B ? 'B2B' : 'B2C';
                 $unitStr = $isPieces ? 'pieces' : 'units';
-                return redirect()->back()->with('error', "{$customerType} maximum order quantity for {$product->name} is {$maxOrderQty} {$unitStr}");
+                $msg = "{$customerType} maximum order quantity for {$product->name} is {$maxOrderQty} {$unitStr}";
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg]);
+                }
+                return redirect()->back()->with('error', $msg);
             }
             
             $cart[$cartKey]['quantity'] = $newQuantity;
@@ -185,6 +208,14 @@ class CartController extends Controller
         }
         
         session()->put('cart', $cart);
+        
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Product added to cart successfully!',
+                'cart_count' => array_sum(array_column($cart, 'quantity'))
+            ]);
+        }
         
         return redirect()->back()->with('success', 'Product added to cart successfully!');
     }

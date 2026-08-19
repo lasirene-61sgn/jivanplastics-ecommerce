@@ -307,10 +307,8 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                         </svg>
-                        @php $cartCount = count(session('cart', [])); @endphp
-                        @if($cartCount > 0)
-                        <span class="absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">{{ $cartCount }}</span>
-                        @endif
+                        @php $cartCount = count((array)session('cart', [])); @endphp
+                        <span class="cart-count absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white" style="display: {{ $cartCount > 0 ? 'flex' : 'none' }};">{{ $cartCount }}</span>
                     </a>
 
                     <div class="relative has-dropdown">

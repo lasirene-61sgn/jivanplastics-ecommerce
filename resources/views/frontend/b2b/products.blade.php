@@ -485,7 +485,71 @@
                         </div>
 
                         <!-- Actions -->
-                        <form action="{{ route('cart.add', $product->id) }}" method="POST">
+                        <form action="{{ route('cart.add', $product->id) }}" method="POST" @submit.prevent="
+                            let form = $event.target;
+                            let submitBtn = form.querySelector('button[type=submit]');
+                            let originalText = submitBtn.innerHTML;
+                            submitBtn.disabled = true;
+                            
+                            // Change text inside the span if it exists, otherwise the button itself
+                            let spanEl = submitBtn.querySelector('span');
+                            if (spanEl) {
+                                spanEl.innerText = 'Adding...';
+                            } else {
+                                submitBtn.innerHTML = 'Adding...';
+                            }
+                            
+                            fetch(form.action, {
+                                method: 'POST',
+                                body: new FormData(form),
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if(data.success) {
+                                    if (spanEl) spanEl.innerText = 'Added \u2713';
+                                    else submitBtn.innerHTML = 'Added \u2713';
+                                    
+                                    submitBtn.classList.remove('bg-slate-900', 'hover:bg-red-600');
+                                    submitBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700');
+                                    
+                                    // Update global cart counts if they exist
+                                    let cartCountEls = document.querySelectorAll('.cart-count, .cart-counter, [data-cart-count]');
+                                    cartCountEls.forEach(el => {
+                                        el.innerText = data.cart_count;
+                                        el.style.display = data.cart_count > 0 ? 'flex' : 'none';
+                                    });
+                                    
+                                    if(typeof notyf !== 'undefined') notyf.success(data.message);
+                                    else if(typeof toastr !== 'undefined') toastr.success(data.message);
+                                    
+                                    setTimeout(() => {
+                                        submitBtn.disabled = false;
+                                        submitBtn.innerHTML = originalText;
+                                        submitBtn.classList.add('bg-slate-900', 'hover:bg-red-600');
+                                        submitBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                                    }, 2000);
+                                } else {
+                                    if(typeof notyf !== 'undefined') notyf.error(data.message || 'Error adding to cart');
+                                    else if(typeof toastr !== 'undefined') toastr.error(data.message || 'Error adding to cart');
+                                    else alert(data.message || 'Error adding to cart');
+                                    
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalText;
+                                }
+                            })
+                            .catch(error => {
+                                if(typeof notyf !== 'undefined') notyf.error('Error adding to cart');
+                                else if(typeof toastr !== 'undefined') toastr.error('Error adding to cart');
+                                else alert('Error adding to cart');
+                                
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            });
+                        ">
                             @csrf
                             <input type="hidden" name="quantity" :value="quantity">
                             <input type="hidden" name="size" :value="selectedSize">
