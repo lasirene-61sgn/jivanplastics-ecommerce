@@ -16,7 +16,10 @@
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700">Description</label>
-                    <textarea name="description" class="w-full px-4 py-3 rounded-xl border border-slate-200 min-h-[120px] outline-none"></textarea>
+                    <input type="hidden" name="description" id="description_input" value="{{ old('description') }}">
+                    <div id="editor-container" class="bg-white rounded-b-xl border border-t-0 border-slate-200" style="min-height: 200px;">
+                        {!! old('description') !!}
+                    </div>
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700">Gallery Images</label>
@@ -393,4 +396,49 @@ function validateImageFiles(input) {
     }
 }
 </script>
+
+@push('scripts')
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],        
+                    ['blockquote'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],      
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],          
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    [{ 'color': [] }, { 'background': [] }],          
+                    [{ 'align': [] }],
+                    ['clean']                                         
+                ]
+            }
+        });
+
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function() {
+            document.querySelector('#description_input').value = quill.root.innerHTML;
+        });
+    });
+</script>
+<style>
+    .ql-toolbar.ql-snow {
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+        border-color: #e2e8f0;
+        background-color: #f8fafc;
+    }
+    .ql-container.ql-snow {
+        border-bottom-left-radius: 0.75rem;
+        border-bottom-right-radius: 0.75rem;
+        border-color: #e2e8f0;
+        min-height: 200px;
+    }
+</style>
+@endpush
+
 @endsection

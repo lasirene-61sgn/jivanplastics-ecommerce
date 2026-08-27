@@ -114,10 +114,6 @@
         @include('components.rejected-items-invoice', ['order' => $order])
     </div>
 
-    @if($order->items->sum('dispatched_quantity') > 0)
-    <h3 class="b2b-section-title" style="margin-top: 3rem;">Dispatch Invoice Summary</h3>
-    @include('components.invoice-display', ['order' => $order])
-    @endif
 </div>
 
 <style>

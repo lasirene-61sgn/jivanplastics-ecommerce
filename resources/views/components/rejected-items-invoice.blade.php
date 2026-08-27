@@ -109,6 +109,7 @@
     </div>
 
     <!-- Summary & Footer -->
+    @if(!request()->is('admin*'))
     <div class="px-8 sm:px-10 py-6 bg-rose-50/50 border-t border-rose-100 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex items-start gap-3 bg-white p-4 rounded-2xl border border-rose-100 max-w-md shadow-sm">
             <div class="p-2 bg-rose-100 text-rose-600 rounded-full flex-shrink-0">
@@ -151,5 +152,6 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 @endif

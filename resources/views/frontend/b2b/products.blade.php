@@ -242,7 +242,7 @@
                 @foreach($products as $product)
                 <div class="group bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-500">
                     <!-- Image Container -->
-                    <a href="#" class="block relative aspect-[4/5] bg-slate-50 overflow-hidden">
+                    <a href="{{ route('b2b.products.show', $product) }}" class="block relative aspect-[4/5] bg-slate-50 overflow-hidden">
                         @php $imagePath = $product->image_url ?? ($product->images->first() ? $product->images->first()->image_path : null); @endphp
                         <!-- <div class="w-full h-64 overflow-hidden rounded-xl"> -->
                         <img src="{{ $imagePath ? asset('storage/' . $imagePath) : asset('images/placeholder.jpg') }}"

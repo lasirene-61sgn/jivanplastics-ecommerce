@@ -7,6 +7,7 @@ use App\Models\ReturnRequest;
 use App\Models\ReturnNote;
 use App\Models\ReturnNoteItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReturnRequestController extends Controller
 {
@@ -207,24 +208,26 @@ class ReturnRequestController extends Controller
             $data['invoice_proof_image'] = $request->file('invoice_proof_image')->store('return_invoices', 'public');
         }
         
-        $returnRequest->update($data);
+        DB::transaction(function () use ($request, $returnRequest, $data) {
+            $returnRequest->update($data);
 
-        // Auto-generate system invoice, Return Note and deduct loyalty points if completed
-        if ($request->status === 'completed') {
-            if (!$returnRequest->returnNote()->exists()) {
-                $noteType = $request->input('note_type', 'debit'); // Default to debit for automatic creation
-                $adjustmentAmount = $request->input('adjustment_amount', 0);
-                
-                if ($returnRequest->order_id) {
-                    if (!$returnRequest->invoice_id) {
-                        $invoice = $this->generateReturnInvoice($returnRequest);
+            // Auto-generate system invoice, Return Note and deduct loyalty points if completed
+            if ($request->status === 'completed') {
+                if (!$returnRequest->returnNote()->exists()) {
+                    $noteType = $request->input('note_type', 'debit'); // Default to debit for automatic creation
+                    $adjustmentAmount = $request->input('adjustment_amount', 0);
+                    
+                    if ($returnRequest->order_id) {
+                        if (!$returnRequest->invoice_id) {
+                            $invoice = $this->generateReturnInvoice($returnRequest);
+                        }
                     }
+                    
+                    $returnNote = $this->generateReturnNote($returnRequest, $noteType, $adjustmentAmount);
+                    $this->deductLoyaltyPointsForReturn($returnRequest, $returnNote);
                 }
-                
-                $returnNote = $this->generateReturnNote($returnRequest, $noteType, $adjustmentAmount);
-                $this->deductLoyaltyPointsForReturn($returnRequest, $returnNote);
             }
-        }
+        });
         
         return redirect()->back()->with('success', 'Return request status updated successfully.');
     }
@@ -244,7 +247,7 @@ class ReturnRequestController extends Controller
         $pieces = $returnRequest->pieces ?? 0;
 
         // Calculate pro-rated values from the original order item
-        $unitPrice = $orderItem->price;
+        $unitPrice = $orderItem->original_price ?? $orderItem->price;
         $perQuantityPieces = $product->per_quantity_pieces > 0 ? $product->per_quantity_pieces : 1;
         $piecePrice = $product->piece_price ?? ($unitPrice / $perQuantityPieces);
         
@@ -256,7 +259,7 @@ class ReturnRequestController extends Controller
         $unitTax = ($orderItem->quantity > 0) ? ($orderItem->tax / $orderItem->quantity) : 0;
         $pieceTax = $unitTax / $perQuantityPieces;
 
-        $unitDiscount = ($orderItem->quantity > 0) ? (($orderItem->discount_amount ?? 0) / $orderItem->quantity) : 0;
+        $unitDiscount = $orderItem->discount_amount ?? 0;
         $pieceDiscount = $unitDiscount / $perQuantityPieces;
 
         $subtotal = ($unitPrice * $quantity) + ($piecePrice * $pieces);
@@ -318,7 +321,7 @@ class ReturnRequestController extends Controller
         $pieces = $returnRequest->pieces ?? 0;
         
         if ($orderItem) {
-            $unitPrice = $orderItem->price;
+            $unitPrice = $orderItem->original_price ?? $orderItem->price;
             $perQuantityPieces = $product->per_quantity_pieces > 0 ? $product->per_quantity_pieces : 1;
             $piecePrice = $product->piece_price ?? ($unitPrice / $perQuantityPieces);
             
@@ -330,7 +333,7 @@ class ReturnRequestController extends Controller
             $unitTax = ($orderItem->quantity > 0) ? ($orderItem->tax / $orderItem->quantity) : 0;
             $pieceTax = $unitTax / $perQuantityPieces;
 
-            $unitDiscount = ($orderItem->quantity > 0) ? (($orderItem->discount_amount ?? 0) / $orderItem->quantity) : 0;
+            $unitDiscount = $orderItem->discount_amount ?? 0;
             $pieceDiscount = $unitDiscount / $perQuantityPieces;
         } else {
             // For Manufacturing Direct returns without an order
@@ -405,9 +408,8 @@ class ReturnRequestController extends Controller
         $deduction = max(1, floor($returnNote->total * 0.001));
 
         if ($deduction > 0) {
-            // We use a custom deduction to allow it to go to 0 but not negative if possible, 
-            // or just use the model's method which handles the check.
-            $customer->loyalty_points = max(0, $customer->loyalty_points - $deduction);
+            // Deduct points directly, allowing the balance to go into the negative
+            $customer->loyalty_points = $customer->loyalty_points - $deduction;
             $customer->save();
             
             // Store deducted points on the return request record

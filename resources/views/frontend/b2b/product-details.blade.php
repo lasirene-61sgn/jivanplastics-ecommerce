@@ -158,10 +158,28 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
 
                     <!-- Description -->
                     @if($product->description)
-                    <div class="mb-8 prose prose-slate prose-sm text-slate-500">
-                        <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">Description</h3>
-                        <p>{{ $product->description }}</p>
+                    <div class="mb-8 border-t border-slate-100 pt-6">
+                        <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 text-center lg:text-left">Product Information</h3>
+                        <div class="prose prose-sm prose-slate max-w-none text-slate-600 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
+                            {!! $product->description !!}
+                        </div>
                     </div>
+                    <style>
+                        .custom-scrollbar::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-track {
+                            background: #f1f5f9; 
+                            border-radius: 4px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb {
+                            background: #cbd5e1; 
+                            border-radius: 4px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                            background: #94a3b8; 
+                        }
+                    </style>
                     @endif
                 </div>
 

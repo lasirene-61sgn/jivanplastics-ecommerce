@@ -12,6 +12,7 @@ use App\Models\InvoiceItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -74,7 +75,9 @@ class OrderController extends Controller
             $subSubcategories = \App\Models\SubSubcategory::where('subcategory_id', $request->subcategory_id)->get();
         }
 
-        return view('admin.orders.index', compact('orders', 'categories', 'subcategories', 'subSubcategories'));
+        $manufacturingTeams = ManufacturingTeam::where('is_active', true)->get();
+
+        return view('admin.orders.index', compact('orders', 'categories', 'subcategories', 'subSubcategories', 'manufacturingTeams'));
     }
 
     /**
@@ -235,10 +238,6 @@ class OrderController extends Controller
             'order_dispatch_description' => 'nullable|string|max:500',
         ]);
 
-        $totalDispatched = 0;
-        $actionsPerformed = false; 
-        $invoiceItems = []; // Track items for invoice creation
-        
         $quantities = $request->dispatched_quantities ?? [];
         if ($request->has('dispatched_pieces')) {
             foreach ($request->dispatched_pieces as $itemId => $pieces) {
@@ -250,74 +249,81 @@ class OrderController extends Controller
                 }
             }
         }
-        
-        foreach ($quantities as $itemId => $dispatchedQuantity) {
-            if ($dispatchedQuantity === null || $dispatchedQuantity === '') {
-                continue; 
-            }
+
+        return DB::transaction(function () use ($request, $order, $quantities) {
+            $totalDispatched = 0;
+            $actionsPerformed = false; 
+            $invoiceItems = []; // Track items for invoice creation
             
-            $orderItem = OrderItem::where('id', $itemId)
-                ->where('order_id', $order->id)
-                ->first();
+            foreach ($quantities as $itemId => $dispatchedQuantity) {
+                if ($dispatchedQuantity === null || $dispatchedQuantity === '') {
+                    continue; 
+                }
                 
-            if ($orderItem) {
-                // Calculate how much we can actually dispatch
-                $maxCanDispatch = $orderItem->dispatch_pending_quantity;
-                $actualDispatched = min((float)$dispatchedQuantity, $maxCanDispatch);
-                
-                if ($actualDispatched > 0) {
-                    $orderItem->update([
-                        'dispatched_quantity' => $orderItem->dispatched_quantity + $actualDispatched,
-                    ]);
-                    $totalDispatched += $actualDispatched;
-                    $orderItem->refresh();
-                    $actionsPerformed = true;
+                $orderItem = OrderItem::where('id', $itemId)
+                    ->where('order_id', $order->id)
+                    ->lockForUpdate()
+                    ->first();
                     
-                    // Add to invoice items list
-                    $invoiceItems[] = [
-                        'order_item' => $orderItem,
-                        'quantity' => $actualDispatched
-                    ];
+                if ($orderItem) {
+                    // Calculate how much we can actually dispatch
+                    $maxCanDispatch = $orderItem->dispatch_pending_quantity;
+                    $actualDispatched = min((float)$dispatchedQuantity, $maxCanDispatch);
+                    
+                    if ($actualDispatched > 0) {
+                        $orderItem->update([
+                            'dispatched_quantity' => $orderItem->dispatched_quantity + $actualDispatched,
+                        ]);
+                        $totalDispatched += $actualDispatched;
+                        $orderItem->refresh();
+                        $actionsPerformed = true;
+                        
+                        // Add to invoice items list
+                        $invoiceItems[] = [
+                            'order_item' => $orderItem,
+                            'quantity' => $actualDispatched
+                        ];
+                    }
                 }
             }
-        }
 
-        // Handle order-level image
-        if ($request->hasFile('order_dispatch_image')) {
-            $imagePath = $request->file('order_dispatch_image')->store('dispatch-images', 'public');
-            DispatchImage::create([
-                'order_id' => $order->id,
-                'image_path' => $imagePath,
-                'description' => $request->order_dispatch_description ?? null,
-                'uploaded_by' => 'admin',
-            ]);
-            $actionsPerformed = true;
-        }
+            // Handle order-level image
+            if ($request->hasFile('order_dispatch_image')) {
+                $imagePath = $request->file('order_dispatch_image')->store('dispatch-images', 'public');
+                DispatchImage::create([
+                    'order_id' => $order->id,
+                    'image_path' => $imagePath,
+                    'description' => $request->order_dispatch_description ?? null,
+                    'uploaded_by' => 'admin',
+                ]);
+                $actionsPerformed = true;
+            }
 
-        // Refresh everything
-        $order->refresh();
-        
-        if (!$actionsPerformed && $totalDispatched <= 0) {
-            return redirect()->back()->with('info', 'No changes were made.');
-        }
+            // Refresh everything
+            $order->refresh();
+            
+            if (!$actionsPerformed && $totalDispatched <= 0) {
+                return redirect()->back()->with('info', 'No changes were made.');
+            }
 
-        // Create Invoice if items were dispatched
-        if (!empty($invoiceItems)) {
-            $this->createInvoice($order, $invoiceItems, $request->shipping_fee ?? 0, $request->other_charges ?? 0);
-        }
+            // Create Invoice if items were dispatched
+            if (!empty($invoiceItems)) {
+                $this->createInvoice($order, $invoiceItems, $request->shipping_fee ?? 0, $request->other_charges ?? 0);
+            }
 
-        // Logic for completion
-        if ($order->total_pending_quantity <= 0) {
-            $order->update([
-                'dispatched_at' => now(),
-                'status' => 'completed',
-                'manufacturing_status' => 'completed',
-                'completed_at' => $order->completed_at ?? now(),
-            ]);
-            return redirect()->back()->with('success', 'All items dispatched! Order completed and Invoice generated.');
-        }
+            // Logic for completion
+            if ($order->total_pending_quantity <= 0) {
+                $order->update([
+                    'dispatched_at' => now(),
+                    'status' => 'completed',
+                    'manufacturing_status' => 'completed',
+                    'completed_at' => $order->completed_at ?? now(),
+                ]);
+                return redirect()->back()->with('success', 'All items dispatched! Order completed and Invoice generated.');
+            }
 
-        return redirect()->back()->with('success', "Processed successfully. $totalDispatched new items dispatched and Invoice generated.");
+            return redirect()->back()->with('success', "Processed successfully. $totalDispatched new items dispatched and Invoice generated.");
+        });
     }
     
     /**
@@ -341,48 +347,52 @@ class OrderController extends Controller
             'dispatch_description' => 'nullable|string|max:500',
         ]);
         
-        // Calculate items to be dispatched (everything pending)
-        $invoiceItems = [];
-        foreach ($order->items as $item) {
-            $pending = $item->dispatch_pending_quantity;
-            if ($pending > 0) {
-                $invoiceItems[] = [
-                    'order_item' => $item,
-                    'quantity' => $pending
-                ];
+        return DB::transaction(function () use ($request, $order) {
+            // Calculate items to be dispatched (everything pending)
+            $invoiceItems = [];
+            foreach ($order->items as $item) {
+                // Refresh item and lock it for update to prevent race conditions
+                $item = OrderItem::where('id', $item->id)->lockForUpdate()->first();
+                $pending = $item->dispatch_pending_quantity;
+                if ($pending > 0) {
+                    $invoiceItems[] = [
+                        'order_item' => $item,
+                        'quantity' => $pending
+                    ];
+                    
+                    // Update item dispatch status
+                    $item->update([
+                        'dispatched_quantity' => $item->quantity
+                    ]);
+                }
+            }
+            
+            $order->update([
+                'dispatched_at' => now(),
+                'status' => 'completed',
+            ]);
+            
+            // Create Invoice for the remaining items
+            if (!empty($invoiceItems)) {
+                $this->createInvoice($order, $invoiceItems, $request->shipping_fee ?? 0, $request->other_charges ?? 0);
+            }
+            
+            // Handle image upload
+            if ($request->hasFile('dispatch_image')) {
+                $image = $request->file('dispatch_image');
+                $imagePath = $image->store('dispatch-images', 'public');
                 
-                // Update item dispatch status
-                $item->update([
-                    'dispatched_quantity' => $item->quantity
+                DispatchImage::create([
+                    'order_id' => $order->id,
+                    'order_item_id' => null,
+                    'image_path' => $imagePath,
+                    'description' => $request->dispatch_description ?? null,
+                    'uploaded_by' => 'admin',
                 ]);
             }
-        }
-        
-        $order->update([
-            'dispatched_at' => now(),
-            'status' => 'completed',
-        ]);
-        
-        // Create Invoice for the remaining items
-        if (!empty($invoiceItems)) {
-            $this->createInvoice($order, $invoiceItems, $request->shipping_fee ?? 0, $request->other_charges ?? 0);
-        }
-        
-        // Handle image upload
-        if ($request->hasFile('dispatch_image')) {
-            $image = $request->file('dispatch_image');
-            $imagePath = $image->store('dispatch-images', 'public');
             
-            DispatchImage::create([
-                'order_id' => $order->id,
-                'order_item_id' => null,
-                'image_path' => $imagePath,
-                'description' => $request->dispatch_description ?? null,
-                'uploaded_by' => 'admin',
-            ]);
-        }
-
-        return redirect()->back()->with('success', 'Order marked as dispatched and final Invoice generated successfully.');
+            return redirect()->back()->with('success', 'Order fully dispatched successfully and Invoice generated.');
+        });
     }
 
     /**
@@ -406,17 +416,7 @@ class OrderController extends Controller
             $quantity = $itemData['quantity'];
             
             // Calculate item amounts
-            $unitPrice = $orderItem->price; // This is unit price (assuming price in DB is per unit)
-            // Note: In OrderItem, usually 'price' is unit price, 'total' is line total.
-            // Let's assume price is unit price.
-            
-            // Calculate tax per unit (pro-rated from order tax?? No, tax should be on item)
-            // If tax is order level, we need to approximate. 
-            // Let's look at OrderItem model. It has 'tax' field? 
-            // The migration for order_items has 'tax'. 
-            $itemTax = $orderItem->tax / $orderItem->quantity * $quantity; // Pro-rate existing tax?
-            // Actually OrderItem has 'tax' which is total tax for the line. 
-            // So unit tax = $orderItem->tax / $orderItem->quantity.
+            $unitPrice = $orderItem->original_price ?? $orderItem->price; // Use original price for subtotal calculation
             
             $unitTax = 0;
             if ($orderItem->quantity > 0) {
@@ -425,7 +425,7 @@ class OrderController extends Controller
             
             $itemDiscount = 0;
              if ($orderItem->quantity > 0) {
-                $itemDiscount = ($orderItem->discount_amount ?? 0) / $orderItem->quantity * $quantity;
+                $itemDiscount = ($orderItem->discount_amount ?? 0) * $quantity;
             }
             
             $lineTotal = ($unitPrice * $quantity) + ($unitTax * $quantity) - $itemDiscount;
@@ -473,9 +473,9 @@ class OrderController extends Controller
             $orderItem = $itemData['order_item'];
             $quantity = $itemData['quantity'];
             
-            $unitPrice = $orderItem->price;
+            $unitPrice = $orderItem->original_price ?? $orderItem->price;
             $unitTax = ($orderItem->quantity > 0) ? ($orderItem->tax / $orderItem->quantity) : 0;
-            $unitDiscount = ($orderItem->quantity > 0) ? (($orderItem->discount_amount ?? 0) / $orderItem->quantity) : 0;
+            $unitDiscount = $orderItem->discount_amount ?? 0;
             
             $lineTotal = ($unitPrice * $quantity) + ($unitTax * $quantity) - ($unitDiscount * $quantity);
             

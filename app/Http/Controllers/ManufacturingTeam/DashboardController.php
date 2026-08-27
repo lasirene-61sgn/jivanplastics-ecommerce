@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -19,12 +20,19 @@ class DashboardController extends Controller
         
         $tab = $request->query('tab', 'allocated');
         
+        $statusCounts = Order::where('manufacturing_team_id', $manufacturingTeam->id)
+            ->select(
+                DB::raw("COUNT(CASE WHEN manufacturing_status = 'allocated' THEN 1 END) as allocated_count"),
+                DB::raw("COUNT(CASE WHEN manufacturing_status = 'processing' THEN 1 END) as processing_count"),
+                DB::raw("COUNT(CASE WHEN manufacturing_status = 'completed' THEN 1 END) as completed_count")
+            )
+            ->first();
+            
+        $allocatedCount = $statusCounts->allocated_count ?? 0;
+        $acceptedCount = $statusCounts->processing_count ?? 0;
+        $completedCount = $statusCounts->completed_count ?? 0;
+        
         $baseQuery = Order::where('manufacturing_team_id', $manufacturingTeam->id);
-        
-        $allocatedCount = (clone $baseQuery)->where('manufacturing_status', 'allocated')->count();
-        $acceptedCount = (clone $baseQuery)->where('manufacturing_status', 'processing')->count();
-        $completedCount = (clone $baseQuery)->where('manufacturing_status', 'completed')->count();
-        
         $query = (clone $baseQuery)->with('customer');
         
         if ($tab === 'allocated') {
@@ -176,83 +184,88 @@ class DashboardController extends Controller
             'rejection_reasons.*' => 'nullable|string',
         ]);
         
-        $totalCompletedPieces = 0;
-        $totalRejectedPieces = 0;
-        
-        // Update manufactured and rejected quantities for each item
-        foreach ($request->completed_pieces as $itemId => $completedPieces) {
-            $orderItem = OrderItem::where('id', $itemId)
-                ->where('order_id', $order->id)
-                ->first();
-                
-            if ($orderItem && $orderItem->per_unit_pieces > 0) {
-                $rejectedPieces = isset($request->rejected_pieces[$itemId]) ? (int)$request->rejected_pieces[$itemId] : 0;
-                $rejectionReason = isset($request->rejection_reasons[$itemId]) ? $request->rejection_reasons[$itemId] : null;
-
-                $canProcessPieces = $orderItem->manufacturing_pending_pieces;
-                $totalToProcessPieces = $completedPieces + $rejectedPieces;
-                
-                // Clamp inputs to pending pieces
-                if ($totalToProcessPieces > $canProcessPieces && $canProcessPieces > 0) {
-                     $actualCompletedPieces = min($completedPieces, $canProcessPieces);
-                     $remainingPieces = $canProcessPieces - $actualCompletedPieces;
-                     $actualRejectedPieces = min($rejectedPieces, $remainingPieces);
-                } else {
-                     $actualCompletedPieces = $completedPieces;
-                     $actualRejectedPieces = $rejectedPieces;
-                }
-                
-                if ($actualCompletedPieces > 0 || $actualRejectedPieces > 0) {
-                    $newManufacturedPieces = $orderItem->manufactured_pieces + $actualCompletedPieces;
-                    $newRejectedPieces = $orderItem->rejected_pieces + $actualRejectedPieces;
+        return DB::transaction(function () use ($request, $order) {
+            $totalCompletedPieces = 0;
+            $totalRejectedPieces = 0;
+            
+            // Update manufactured and rejected quantities for each item
+            foreach ($request->completed_pieces as $itemId => $completedPieces) {
+                $orderItem = OrderItem::where('id', $itemId)
+                    ->where('order_id', $order->id)
+                    ->lockForUpdate()
+                    ->first();
                     
-                    // Convert pieces back to units for database consistency
-                    $newManufacturedUnits = $newManufacturedPieces / $orderItem->per_unit_pieces;
-                    $newRejectedUnits = $newRejectedPieces / $orderItem->per_unit_pieces;
+                if ($orderItem && $orderItem->per_unit_pieces > 0) {
+                    $rejectedPieces = isset($request->rejected_pieces[$itemId]) ? (int)$request->rejected_pieces[$itemId] : 0;
+                    $rejectionReason = isset($request->rejection_reasons[$itemId]) ? $request->rejection_reasons[$itemId] : null;
 
-                    $orderItem->update([
-                        'manufactured_quantity' => $newManufacturedUnits,
-                        'rejected_quantity' => $newRejectedUnits,
-                        'manufactured_pieces' => $newManufacturedPieces,
-                        'rejected_pieces' => $newRejectedPieces,
-                        'rejection_reason' => $rejectionReason ? ($orderItem->rejection_reason ? $orderItem->rejection_reason . '; ' . $rejectionReason : $rejectionReason) : $orderItem->rejection_reason,
-                    ]);
+                    $canProcessPieces = $orderItem->manufacturing_pending_pieces;
+                    $totalToProcessPieces = $completedPieces + $rejectedPieces;
                     
-                    $totalCompletedPieces += $actualCompletedPieces;
-                    $totalRejectedPieces += $actualRejectedPieces;
+                    // Clamp inputs to pending pieces
+                    if ($totalToProcessPieces > $canProcessPieces && $canProcessPieces > 0) {
+                         $actualCompletedPieces = min($completedPieces, $canProcessPieces);
+                         $remainingPieces = $canProcessPieces - $actualCompletedPieces;
+                         $actualRejectedPieces = min($rejectedPieces, $remainingPieces);
+                    } else {
+                         $actualCompletedPieces = $completedPieces;
+                         $actualRejectedPieces = $rejectedPieces;
+                    }
+                    
+                    if ($actualCompletedPieces > 0 || $actualRejectedPieces > 0) {
+                        $newManufacturedPieces = $orderItem->manufactured_pieces + $actualCompletedPieces;
+                        $newRejectedPieces = $orderItem->rejected_pieces + $actualRejectedPieces;
+                        
+                        // Convert pieces back to units for database consistency
+                        $newManufacturedUnits = $newManufacturedPieces / $orderItem->per_unit_pieces;
+                        $newRejectedUnits = $newRejectedPieces / $orderItem->per_unit_pieces;
+
+                        $orderItem->update([
+                            'manufactured_quantity' => $newManufacturedUnits,
+                            'rejected_quantity' => $newRejectedUnits,
+                            'manufactured_pieces' => $newManufacturedPieces,
+                            'rejected_pieces' => $newRejectedPieces,
+                            'rejection_reason' => $rejectionReason ? ($orderItem->rejection_reason ? $orderItem->rejection_reason . '; ' . $rejectionReason : $rejectionReason) : $orderItem->rejection_reason,
+                        ]);
+                        
+                        $totalCompletedPieces += $actualCompletedPieces;
+                        $totalRejectedPieces += $actualRejectedPieces;
+                    }
                 }
             }
-        }
-        
-        // Check if everything is manufactured/rejected (using pieces since we are tracking pieces now)
-        $stillPendingPieces = $order->items->sum(function($item) {
-            return $item->manufacturing_pending_pieces;
+            
+            // Check if everything is manufactured/rejected (using pieces since we are tracking pieces now)
+            // Re-fetch items to get the updated values
+            $order->refresh();
+            $stillPendingPieces = $order->items->sum(function($item) {
+                return $item->manufacturing_pending_pieces;
+            });
+
+            if ($stillPendingPieces <= 0) {
+                $order->update([
+                    'manufacturing_status' => 'completed',
+                    'completed_at' => now(),
+                ]);
+                
+                // Notify admin
+                try {
+                    app(\App\Services\FirebaseNotificationService::class)->sendNotification(
+                        'admin',
+                        'Manufacturing Complete',
+                        "Manufacturing for Order #{$order->order_number} is fully complete.",
+                        ['icon' => 'success', 'order_id' => $order->id]
+                    );
+                } catch (\Exception $e) {
+                    \Log::error("Admin Completion Notification Error: " . $e->getMessage());
+                }
+                
+                return redirect()->back()->with('success', 'All pieces processed. Order marked as Manufacturing Completed.');
+            } elseif ($totalCompletedPieces > 0 || $totalRejectedPieces > 0) {
+                return redirect()->back()->with('success', $totalCompletedPieces . ' pieces marked as manufactured, ' . $totalRejectedPieces . ' pieces rejected. ' . $stillPendingPieces . ' pieces remain.');
+            } else {
+                return redirect()->back()->with('info', 'No manufacturing progress was logged.');
+            }
         });
-
-        if ($stillPendingPieces <= 0) {
-            $order->update([
-                'manufacturing_status' => 'completed',
-                'completed_at' => now(),
-            ]);
-            
-            // Notify admin
-            try {
-                app(\App\Services\FirebaseNotificationService::class)->sendNotification(
-                    'admin',
-                    'Manufacturing Complete',
-                    "Manufacturing for Order #{$order->order_number} is fully complete.",
-                    ['icon' => 'success', 'order_id' => $order->id]
-                );
-            } catch (\Exception $e) {
-                \Log::error("Admin Completion Notification Error: " . $e->getMessage());
-            }
-            
-            return redirect()->back()->with('success', 'All pieces processed. Order marked as Manufacturing Completed.');
-        } elseif ($totalCompletedPieces > 0 || $totalRejectedPieces > 0) {
-            return redirect()->back()->with('success', $totalCompletedPieces . ' pieces marked as manufactured, ' . $totalRejectedPieces . ' pieces rejected. ' . $stillPendingPieces . ' pieces remain.');
-        } else {
-            return redirect()->back()->with('info', 'No manufacturing progress was logged.');
-        }
     }
     
     /**

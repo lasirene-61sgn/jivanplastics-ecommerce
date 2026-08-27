@@ -223,7 +223,7 @@
                                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest">Select Factory Team</label>
                                     <select name="manufacturing_team_id" class="w-full px-4 py-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold outline-none focus:border-indigo-500" required>
                                         <option value="">Choose a Factory Team</option>
-                                        @foreach(App\Models\ManufacturingTeam::where('is_active', true)->get() as $team)
+                                        @foreach($manufacturingTeams as $team)
                                             <option value="{{ $team->id }}">{{ $team->factory_name }}</option>
                                         @endforeach
                                     </select>

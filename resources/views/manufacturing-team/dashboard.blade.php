@@ -215,7 +215,7 @@
                     <!-- Tabs Section -->
                     <div class="px-8 pt-4 flex gap-4 border-b border-slate-50 overflow-x-auto">
                         <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'allocated']) }}" class="pb-4 px-2 text-sm font-black tracking-tight {{ $tab === 'allocated' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-slate-500 hover:text-slate-900' }} transition-colors whitespace-nowrap">
-                            Admin Allocated Orders 
+                            Admin Allocated Orders
                             <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] {{ $tab === 'allocated' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600' }}">{{ $allocatedCount }}</span>
                         </a>
                         <a href="{{ route('manufacturing-team.dashboard', ['tab' => 'accepted']) }}" class="pb-4 px-2 text-sm font-black tracking-tight {{ $tab === 'accepted' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-slate-500 hover:text-slate-900' }} transition-colors whitespace-nowrap">
@@ -235,7 +235,7 @@
                         @csrf
                         @if($tab !== 'completed')
                         <!-- Bulk Action Toolbar -->
-                        <div class="bg-slate-50/50 p-4 px-8 border-b border-slate-50 flex flex-wrap items-center gap-4">
+                        <!-- <div class="bg-slate-50/50 p-4 px-8 border-b border-slate-50 flex flex-wrap items-center gap-4">
                             <label class="flex items-center gap-3 cursor-pointer group">
                                 <div class="relative">
                                     <input type="checkbox" id="selectAll" class="peer hidden">
@@ -275,14 +275,14 @@
                                 </button>
                             </div>
                             @endif
-                        </div>
+                        </div> -->
                         @endif
 
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead>
                                     <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50/30">
-                                        <th class="py-5 px-8"></th>
+                                        <!-- <th class="py-5 px-8"></th> -->
                                         <th class="py-5 px-4 font-black">Order Ref</th>
                                         <th class="py-5 px-4 font-black text-center">Status</th>
                                         <th class="py-5 px-4 font-black">Timeline</th>
@@ -292,7 +292,7 @@
                                 <tbody class="divide-y divide-slate-50">
                                     @foreach($orders as $order)
                                     <tr class="group hover:bg-slate-50/50 transition-colors">
-                                        <td class="py-6 px-8">
+                                        <!-- <td class="py-6 px-8">
                                             @if(in_array($order->manufacturing_status, ['allocated', 'processing']))
                                             <label class="cursor-pointer">
                                                 <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" class="order-checkbox hidden peer" @change="updateSelectedCount()">
@@ -303,7 +303,7 @@
                                                 </div>
                                             </label>
                                             @endif
-                                        </td>
+                                        </td> -->
                                         <td class="py-6 px-4">
                                             <div class="flex flex-col">
                                                 <span class="text-sm font-black text-slate-900 tracking-tight">#{{ $order->order_number }}</span>
@@ -326,8 +326,12 @@
                                         </td>
                                         <td class="py-6 px-4">
                                             <div class="flex flex-col">
-                                                <span class="text-[11px] font-black text-slate-700 tracking-tight">{{ $order->allocated_at ? $order->allocated_at->format('d M, Y') : '---' }}</span>
-                                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{{ $order->allocated_at ? $order->allocated_at->format('H:i A') : 'N/A' }}</span>
+                                                <span class="text-[11px] font-black text-slate-700 tracking-tight">
+                                                    {{ $order->allocated_at ? $order->allocated_at->timezone('Asia/Kolkata')->format('d M, Y') : '---' }}
+                                                </span>
+                                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                    {{ $order->allocated_at ? $order->allocated_at->timezone('Asia/Kolkata')->format('h:i A') : 'N/A' }}
+                                                </span>
                                             </div>
                                         </td>
                                         <td class="py-6 px-8 text-right">
@@ -337,13 +341,13 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                     </svg>
-                                                </a>
+                                                View</a>
                                                 @if($order->manufacturing_status == 'allocated')
-                                                <button type="button" class="accept-btn p-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all shadow-lg shadow-rose-100 active:scale-95" data-order-id="{{ $order->id }}">
+                                                <!-- <button type="button" class="accept-btn p-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all shadow-lg shadow-rose-100 active:scale-95" data-order-id="{{ $order->id }}">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                                                     </svg>
-                                                </button>
+                                                </button> -->
                                                 @endif
                                             </div>
                                         </td>
@@ -483,9 +487,9 @@
                 bulkAcceptBtn.addEventListener('click', function() {
                     const orderIds = getSelectedIds();
                     const dispatchDate = document.getElementById('bulk_dispatch_date').value;
-                    
+
                     if (orderIds.length === 0) return;
-                    
+
                     if (!dispatchDate) {
                         alert('Please select a tentative dispatch date before accepting the orders.');
                         document.getElementById('bulk_dispatch_date').focus();
@@ -532,13 +536,13 @@
                     const orderId = this.getAttribute('data-order-id');
                     const dispatchDateInput = document.getElementById('bulk_dispatch_date');
                     const dispatchDate = dispatchDateInput ? dispatchDateInput.value : null;
-                    
+
                     if (dispatchDateInput && !dispatchDate) {
                         alert('Please select a tentative dispatch date at the top before accepting.');
                         dispatchDateInput.focus();
                         return;
                     }
-                    
+
                     if (confirm(`Process this order individually${dispatchDate ? ' with dispatch date ' + dispatchDate : ''}?`)) {
                         const form = document.getElementById('bulkActionForm');
                         form.action = '{{ route("manufacturing-team.orders.bulk-accept") }}';

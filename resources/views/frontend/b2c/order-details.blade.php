@@ -31,7 +31,7 @@
 
     {{-- Order Content --}}
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
-        @include('components.invoice-display', ['order' => $order])
+        @include('components.order-display', ['order' => $order, 'showViewButton' => false])
     </div>
 
 </div>

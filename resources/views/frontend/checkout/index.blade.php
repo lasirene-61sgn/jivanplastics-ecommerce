@@ -18,6 +18,7 @@
         <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
             <div style="flex: 2; min-width: 300px;">
                 
+                {{-- Billing Address --}}
                 <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 2rem;">
                     <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem;">Billing Address</h2>
                     
@@ -49,11 +50,12 @@
                     </div>
                 </div>
                 
+                {{-- Shipping Address --}}
                 <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 2rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937;">Shipping Address</h2>
                         <label for="use_same_address" style="display: flex; align-items: center; cursor: pointer; color: #8B0000; font-weight: 600;">
-                            <input type="checkbox" id="use_same_address" name="use_same_address" value="1" {{ old('use_same_address') ? 'checked' : '' }} style="margin-right: 0.5rem;">
+                            <input type="checkbox" id="use_same_address" name="use_same_address" value="1" {{ old('use_same_address', 1) ? 'checked' : '' }} style="margin-right: 0.5rem;">
                             Same as billing address
                         </label>
                     </div>
@@ -77,11 +79,12 @@
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4b5563;">Country *</label>
-                            <input type="text" id="shipping_country" name="shipping_country" value="{{ old('shipping_country') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
+                            <input type="text" id="shipping_country" name="shipping_country" value="{{ old('shipping_country', 'India') }}" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
                         </div>
                     </div>
                 </div>
 
+                {{-- Payment Method --}}
                 <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem;">
                     <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem;">Payment Method</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -98,10 +101,9 @@
                             <input type="radio" name="payment_method" value="cod" disabled style="margin-right: 1rem;">
                             <div>
                                 <span style="display: block; font-weight: 600; color: #9ca3af;">Cash on Delivery (Locked)</span>
-                                <span style="font-size: 0.75rem; color: #9ca3af;">As decided by Admin, this option is locked for you.</span>
+                                <span style="font-size: 0.75rem; color: #9ca3af;">As decided by Admin, this option is locked for your account.</span>
                             </div>
                         </label>
-                        <input type="hidden" name="payment_method_locked" value="bank_transfer">
                         @endif
 
                         <div style="border: 1px solid #e5e7eb; border-radius: 0.5rem; overflow: hidden;">
@@ -126,10 +128,6 @@
                                         <span style="font-size: 0.875rem;">Direct Bank Transfer (IMPS/NEFT/RTGS)</span>
                                     </label>
                                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                        <input type="radio" name="bt_sub_option" value="card">
-                                        <span style="font-size: 0.875rem;">Credit / Debit Card (Dummy)</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                                         <input type="radio" name="bt_sub_option" value="upi">
                                         <span style="font-size: 0.875rem;">UPI (GPay / PhonePe / Paytm)</span>
                                     </label>
@@ -148,39 +146,34 @@
                 </div>
             </div>
             
+            {{-- Order Review Sidebar --}}
             <div style="flex: 1; min-width: 300px;">
                 <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; position: sticky; top: 1rem;">
                     <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 1.5rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem;">Order Review</h2>
                     
-                    @php
-                        $subtotal = 0; $totalGst = 0; $totalDiscount = 0;
-                        $customerModel = auth()->user()->customer ?? null;
-                    @endphp
-
                     <div style="margin-bottom: 1rem;">
                         @foreach($cart as $id => $item)
                             @php
-                                $product = \App\Models\Product::find($id);
+                                $product = \App\Models\Product::find($item['product_id'] ?? $id);
                                 $unitToPay = $item['price'];
                                 $unitBase = $item['original_price'] ?? ($product ? $product->price : $item['price']);
                                 
                                 $lineBase = $unitBase * $item['quantity'];
                                 $lineDisc = $unitToPay * $item['quantity'];
-                                
                                 $gstPercentage = $item['gst_percentage'] ?? ($product ? $product->gst_percentage : 0);
                                 $lineGst = $lineDisc * ($gstPercentage / 100);
-                                
-                                $subtotal += $lineBase;
-                                $totalDiscount += ($lineBase - $lineDisc);
-                                $totalGst += $lineGst;
                             @endphp
                             <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #f9fafb;">
                                 <div style="font-size: 0.875rem;">
                                     <strong>{{ $item['name'] }}</strong><br>
                                     <small>Qty: {{ $item['quantity'] }} × ₹{{ number_format($unitToPay, 2) }}</small>
+                                    
                                     @if($lineBase > $lineDisc)
-                                        <span style="background-color: #d1fae5; color: #065f46; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; font-weight: 800; text-transform: uppercase; margin-left: 0.5rem;">Saved ₹{{ number_format($lineBase - $lineDisc, 2) }}</span>
+                                        <span style="background-color: #d1fae5; color: #065f46; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; font-weight: 800; text-transform: uppercase; margin-left: 0.5rem;">
+                                            Saved ₹{{ number_format($lineBase - $lineDisc, 2) }}
+                                        </span>
                                     @endif
+
                                     @php
                                         $isItemPieces = isset($item['is_pieces']) && $item['is_pieces'];
                                     @endphp
@@ -201,22 +194,35 @@
                             <span>₹{{ number_format($subtotal, 2) }}</span>
                         </div>
                         
-                        @if($totalDiscount > 0)
+                        @if($totalDealerDiscount > 0)
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #059669; font-weight: 600;">
                             <span>Dealer Discount:</span>
-                            <span>- ₹{{ number_format($totalDiscount, 2) }}</span>
+                            <span>- ₹{{ number_format($totalDealerDiscount, 2) }}</span>
                         </div>
                         @endif
                         
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="color: #6b7280;">18% GST Total:</span>
+                            <span style="color: #6b7280;">GST Total:</span>
                             <span>+ ₹{{ number_format($totalGst, 2) }}</span>
                         </div>
                         
-                        @if(isset($b2bDiscountAmount) && $b2bDiscountAmount > 0)
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #4f46e5; font-weight: 600;">
-                            <span>B2B Extra Discount (2%):</span>
-                            <span>- ₹{{ number_format($b2bDiscountAmount, 2) }}</span>
+                        {{-- B2B Target Discount Details --}}
+                        @if($customer->customer_type === 'dealer' && isset($b2bDiscountAmount) && $b2bDiscountAmount > 0)
+                        <div style="margin-bottom: 0.5rem; background: #eef2ff; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #c7d2fe;">
+                            <div style="display: flex; justify-content: space-between; color: #4338ca; font-weight: 700; font-size: 0.875rem;">
+                                <span>B2B Special Discounts:</span>
+                                <span>- ₹{{ number_format($b2bDiscountAmount, 2) }}</span>
+                            </div>
+                            @if(!empty($b2bBreakdown))
+                                <div style="margin-top: 0.25rem; font-size: 0.75rem; color: #4f46e5;">
+                                    @foreach($b2bBreakdown as $ruleName => $discVal)
+                                        <div style="display: flex; justify-content: space-between; padding-left: 0.5rem; margin-top: 2px;">
+                                            <span>• {{ $ruleName }}</span>
+                                            <span>- ₹{{ number_format($discVal, 2) }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                         @endif
                         
@@ -227,7 +233,9 @@
                         
                         <div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 2px solid #f3f4f6; margin-top: 1rem;">
                             <span style="font-weight: 800; font-size: 1.25rem;">Grand Total:</span>
-                            <span style="font-weight: 800; font-size: 1.25rem; color: #8B0000;">₹<span id="grand_total_display">{{ number_format((($subtotal - $totalDiscount) + $totalGst) - ($b2bDiscountAmount ?? 0), 2) }}</span></span>
+                            <span style="font-weight: 800; font-size: 1.25rem; color: #8B0000;">
+                                ₹<span id="grand_total_display">{{ number_format($total, 2) }}</span>
+                            </span>
                         </div>
                     </div>
                     
@@ -252,51 +260,48 @@
                 fields.forEach(f => {
                     const billing = document.getElementById('billing_' + f);
                     const shipping = document.getElementById('shipping_' + f);
-                    
-                    // Force input value synchronization
-                    shipping.value = billing.value;
-                    shipping.readOnly = true;
-                    
-                    // CRITICAL FIX: Strip required attribute if checked so empty hidden inputs don't break validation
-                    shipping.removeAttribute('required');
+                    if (billing && shipping) {
+                        shipping.value = billing.value;
+                        shipping.readOnly = true;
+                        shipping.removeAttribute('required');
+                    }
                 });
             } else {
                 container.style.opacity = '1';
                 fields.forEach(f => {
                     const shipping = document.getElementById('shipping_' + f);
-                    shipping.readOnly = false;
-                    
-                    // CRITICAL FIX: Re-enable required attribute if unchecked
-                    shipping.setAttribute('required', 'required');
+                    if (shipping) {
+                        shipping.readOnly = false;
+                        shipping.setAttribute('required', 'required');
+                    }
                 });
             }
         }
 
-        // Run sync on state change
         checkbox.addEventListener('change', syncAddresses);
         
-        // Update shipping inputs in real-time if billing data shifts while checked
         fields.forEach(f => {
-            document.getElementById('billing_' + f).addEventListener('input', function() {
-                if (checkbox.checked) {
-                    const shipping = document.getElementById('shipping_' + f);
-                    shipping.value = this.value;
-                }
-            });
+            const billing = document.getElementById('billing_' + f);
+            if (billing) {
+                billing.addEventListener('input', function() {
+                    if (checkbox.checked) {
+                        const shipping = document.getElementById('shipping_' + f);
+                        if (shipping) shipping.value = this.value;
+                    }
+                });
+            }
         });
 
-        // Run on initial page load (handles old form inputs after errors or session refresh)
         syncAddresses();
 
-        // Payment Method Logic
+        // Payment Method calculation
         const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
         const bankTransferOptions = document.getElementById('bank_transfer_options');
         const btDiscountRow = document.getElementById('bank_transfer_discount_row');
         const btDiscountValue = document.getElementById('bt_discount_value');
         const grandTotalDisplay = document.getElementById('grand_total_display');
         
-        const b2bDiscountAmount = {{ $b2bDiscountAmount ?? 0 }};
-        const baseGrandTotal = {{ ($subtotal - $totalDiscount) + $totalGst }} - b2bDiscountAmount;
+        const baseGrandTotal = {{ $total }};
         const btDiscountPercent = {{ $customer->bank_transfer_discount ?? 0 }};
         
         function updateOrderSummary() {

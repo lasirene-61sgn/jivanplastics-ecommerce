@@ -11,50 +11,93 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
     /**
+     * Resolve target level and percentage for B2B discounts
+     */
+    private function resolveB2BDiscountDetails($product, $customer)
+    {
+        if (!$customer || $customer->customer_type !== 'dealer' || !$product) {
+            return null;
+        }
+
+        // 1. Check Product level override
+        if (!empty($product->b2b_discount_percentage) && $product->b2b_discount_percentage > 0) {
+            return [
+                'type' => 'Product',
+                'name' => $product->name,
+                'percentage' => (float) $product->b2b_discount_percentage
+            ];
+        }
+
+        // 2. Check Subcategory level override
+        if ($product->subcategory && !empty($product->subcategory->b2b_discount_percentage) && $product->subcategory->b2b_discount_percentage > 0) {
+            return [
+                'type' => 'Subcategory',
+                'name' => $product->subcategory->name,
+                'percentage' => (float) $product->subcategory->b2b_discount_percentage
+            ];
+        }
+
+        // 3. Check Category level override
+        if ($product->category && !empty($product->category->b2b_discount_percentage) && $product->category->b2b_discount_percentage > 0) {
+            return [
+                'type' => 'Category',
+                'name' => $product->category->name,
+                'percentage' => (float) $product->category->b2b_discount_percentage
+            ];
+        }
+
+        // 4. Fallback: No default discount
+        return null;
+    }
+
+    /**
      * Display the checkout page.
-     *
-     * @return \Illuminate\View\View
      */
     public function index()
     {
-        // Check if user is logged in
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Please login to checkout.');
         }
-        
+
         $cart = session()->get('cart', []);
-        
-        // Check if cart is empty
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
-        
-        // Get customer
+
         $user = Auth::user();
         $customer = Customer::where('email', $user->email)->first();
-        
+
         if (!$customer) {
             return redirect()->route('cart.index')->with('error', 'Customer information not found.');
         }
-        
-        // Calculate totals with GST
+
         $subtotal = 0;
         $totalGst = 0;
-        
+        $totalDealerDiscount = 0;
+        $b2bDiscountAmount = 0;
+        $b2bBreakdown = [];
+
         foreach ($cart as $cartKey => $item) {
-            $itemTotal = $item['price'] * $item['quantity'];
-            $subtotal += $itemTotal;
-            
-            // Get product to calculate GST
             $productId = $item['product_id'] ?? $cartKey;
-            $product = Product::find($productId);
+            $product = Product::with(['category', 'subcategory'])->find($productId);
+
+            $unitToPay = $item['price'];
+            $unitBase = $item['original_price'] ?? ($product ? $product->price : $item['price']);
             
+            $lineBase = $unitBase * $item['quantity'];
+            $lineDisc = $unitToPay * $item['quantity'];
+            
+            $subtotal += $lineBase;
+            $totalDealerDiscount += ($lineBase - $lineDisc);
+
+            // Variation lookup
             $variation = null;
             if ($product) {
                 $variation = $product->variations()
@@ -75,101 +118,106 @@ class CheckoutController extends Controller
                     })
                     ->first();
             }
-            
-            if ($product) {
-                $gstPct = $variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0);
-                if ($gstPct > 0) {
-                    $gstAmount = $itemTotal * $gstPct / 100;
-                    $totalGst += $gstAmount;
+
+            // GST calculation
+            $gstPct = $item['gst_percentage'] ?? ($variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0));
+            $lineGst = $lineDisc * ($gstPct / 100);
+            $totalGst += $lineGst;
+
+            // B2B Discount resolution
+            if ($customer->customer_type === 'dealer') {
+                $b2bRule = $this->resolveB2BDiscountDetails($product, $customer);
+                if ($b2bRule && $b2bRule['percentage'] > 0) {
+                    $itemDiscount = ($lineDisc * $b2bRule['percentage']) / 100;
+                    $b2bDiscountAmount += $itemDiscount;
+
+                    $key = $b2bRule['type'] . ': ' . $b2bRule['name'] . ' (' . $b2bRule['percentage'] . '%)';
+                    if (!isset($b2bBreakdown[$key])) {
+                        $b2bBreakdown[$key] = 0;
+                    }
+                    $b2bBreakdown[$key] += $itemDiscount;
                 }
             }
         }
-        
-        $shipping = 0; // Free shipping
-        $total = $subtotal + $shipping + $totalGst;
-        
-        // Calculate B2B 2% discount
-        $b2bDiscountAmount = 0;
-        if ($customer->customer_type === 'dealer') {
-            $b2bDiscountAmount = ($total * 2) / 100;
-            $total -= $b2bDiscountAmount;
-        }
-        
-        return view('frontend.checkout.index', compact('cart', 'customer', 'subtotal', 'totalGst', 'shipping', 'b2bDiscountAmount', 'total'));
+
+        $shipping = 0;
+        $total = ($subtotal - $totalDealerDiscount) + $totalGst - $b2bDiscountAmount;
+
+        return view('frontend.checkout.index', compact(
+            'cart',
+            'customer',
+            'subtotal',
+            'totalDealerDiscount',
+            'totalGst',
+            'shipping',
+            'b2bDiscountAmount',
+            'b2bBreakdown',
+            'total'
+        ));
     }
-    
+
     /**
      * Process the checkout.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function process(Request $request)
     {
-        // Validate the request
         $request->validate([
             'billing_address' => 'required|string|max:255',
             'billing_city' => 'required|string|max:100',
             'billing_state' => 'required|string|max:100',
             'billing_zip' => 'required|string|max:20',
             'billing_country' => 'required|string|max:100',
-            'use_same_address' => 'boolean',
-            'shipping_address' => 'required_if:use_same_address,0|string|max:255',
-            'shipping_city' => 'required_if:use_same_address,0|string|max:100',
-            'shipping_state' => 'required_if:use_same_address,0|string|max:100',
-            'shipping_zip' => 'required_if:use_same_address,0|string|max:20',
-            'shipping_country' => 'required_if:use_same_address,0|string|max:100',
+            'use_same_address' => 'nullable|boolean',
+            'shipping_address' => 'required_if:use_same_address,0|nullable|string|max:255',
+            'shipping_city' => 'required_if:use_same_address,0|nullable|string|max:100',
+            'shipping_state' => 'required_if:use_same_address,0|nullable|string|max:100',
+            'shipping_zip' => 'required_if:use_same_address,0|nullable|string|max:20',
+            'shipping_country' => 'required_if:use_same_address,0|nullable|string|max:100',
             'payment_method' => 'required|string|in:cod,bank_transfer',
         ], [
-            'shipping_address.required_if' => 'The shipping address field is required when not using the same address.',
-            'shipping_city.required_if' => 'The shipping city field is required when not using the same address.',
-            'shipping_state.required_if' => 'The shipping state field is required when not using the same address.',
-            'shipping_zip.required_if' => 'The shipping zip field is required when not using the same address.',
-            'shipping_country.required_if' => 'The shipping country field is required when not using the same address.',
+            'shipping_address.required_if' => 'Shipping address is required when different from billing.',
+            'shipping_city.required_if' => 'Shipping city is required when different from billing.',
+            'shipping_state.required_if' => 'Shipping state is required when different from billing.',
+            'shipping_zip.required_if' => 'Shipping ZIP code is required when different from billing.',
+            'shipping_country.required_if' => 'Shipping country is required when different from billing.',
         ]);
-        
-        // Check if user is logged in
+
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Please login to checkout.');
         }
-        
+
         $cart = session()->get('cart', []);
-        
-        // Check if cart is empty
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
-        
-        // Get customer
+
         $user = Auth::user();
         $customer = Customer::where('email', $user->email)->first();
-        
+
         if (!$customer) {
             return redirect()->route('cart.index')->with('error', 'Customer information not found.');
         }
 
-        // Check if payment method is COD and if it's allowed
         if ($request->payment_method === 'cod' && !$customer->is_cod_allowed) {
-            return redirect()->back()->with('error', 'Cash on Delivery is not available for your account. Please use Bank Transfer.');
+            return redirect()->back()->with('error', 'Cash on Delivery is not allowed for your account. Please use Bank Transfer.');
         }
-        
-        // Calculate totals with GST
+
         $subtotal = 0;
         $totalGst = 0;
+        $b2bDiscountAmount = 0;
         $items = [];
-        
+
         foreach ($cart as $cartKey => $item) {
             $itemTotal = $item['price'] * $item['quantity'];
             $subtotal += $itemTotal;
-            
-            // Get product to calculate GST and Original Prices
+
             $productId = $item['product_id'] ?? $cartKey;
-            $product = Product::find($productId);
+            $product = Product::with(['category', 'subcategory'])->find($productId);
+
             $gstAmount = 0;
             $originalPrice = $item['price'];
             $discountAmount = 0;
-            
-            // 1. Find the variation first
+
             $variation = null;
             if ($product) {
                 $variation = $product->variations()
@@ -191,40 +239,44 @@ class CheckoutController extends Controller
                     ->first();
             }
 
-            // 2. Calculate prices based on variation
             if ($product) {
-                // Determine the original base price (GST-exclusive)
                 $gstInclusiveOriginal = $variation ? $variation->total_price : $product->price;
                 $gstPct = $variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0);
                 $originalBasePrice = $gstInclusiveOriginal / (1 + ($gstPct / 100));
-                
+
                 $isPieces = isset($item['is_pieces']) && $item['is_pieces'];
                 $tempPerUnitPieces = $variation ? $variation->total_pieces : ($product->per_quantity_pieces ?? 1);
-                
+
                 if ($isPieces && $tempPerUnitPieces > 0) {
                     $originalBasePrice = $originalBasePrice / $tempPerUnitPieces;
                 }
 
                 $originalPrice = $originalBasePrice;
-                
+
                 if ($gstPct > 0) {
-                    $gstAmount = $itemTotal * $gstPct / 100;
+                    $gstAmount = $itemTotal * ($gstPct / 100);
                     $totalGst += $gstAmount;
                 }
-                
-                // Calculate discount based on base prices
+
                 $discountAmount = max(0, ($originalBasePrice - $item['price']) * $item['quantity']);
             }
-            
+
             $isPieces = isset($item['is_pieces']) && $item['is_pieces'];
             $perUnitPieces = $variation ? $variation->total_pieces : ($product->per_quantity_pieces ?? 1);
             $totalPieces = $perUnitPieces * $item['quantity'];
             $piecePrice = $variation ? $variation->piece_price : ($product->piece_price ?? 0);
-            
+
             if ($isPieces) {
                 $perUnitPieces = 1;
                 $totalPieces = $item['quantity'];
-                $piecePrice = $item['price']; // Since piece price is essentially the actual price when ordering pieces
+                $piecePrice = $item['price'];
+            }
+
+            if ($customer->customer_type === 'dealer') {
+                $b2bRule = $this->resolveB2BDiscountDetails($product, $customer);
+                if ($b2bRule && $b2bRule['percentage'] > 0) {
+                    $b2bDiscountAmount += ($itemTotal * $b2bRule['percentage']) / 100;
+                }
             }
 
             $items[] = [
@@ -239,31 +291,22 @@ class CheckoutController extends Controller
                 'total' => $itemTotal,
                 'gst_amount' => $gstAmount,
                 'original_price' => $originalPrice,
-                'discount_amount' => $discountAmount / $item['quantity'], // Store per-unit discount
+                'discount_amount' => $discountAmount / max($item['quantity'], 1),
                 'size' => $item['size'] ?? null,
                 'thickness' => $item['thickness'] ?? null,
                 'color' => $item['color'] ?? null,
             ];
         }
-        
-        $shipping = 0; // Free shipping
-        $total = $subtotal + $shipping + $totalGst;
 
-        // Calculate B2B Extra 2% Discount
-        $b2bDiscountAmount = 0;
-        if ($customer->customer_type === 'dealer') {
-            $b2bDiscountAmount = ($total * 2) / 100;
-            $total -= $b2bDiscountAmount;
-        }
+        $shipping = 0;
+        $total = $subtotal + $shipping + $totalGst - $b2bDiscountAmount;
 
-        // Calculate Bank Transfer Discount
         $btDiscountAmount = 0;
         if ($request->payment_method === 'bank_transfer' && $customer->bank_transfer_discount > 0) {
             $btDiscountAmount = ($total * $customer->bank_transfer_discount) / 100;
             $total -= $btDiscountAmount;
         }
-        
-        // Calculate Order-wide totals for immutable storage
+
         $originalSubtotal = array_reduce($items, function($carry, $item) {
             return $carry + ($item['original_price'] * $item['quantity']);
         }, 0);
@@ -271,7 +314,8 @@ class CheckoutController extends Controller
             return $carry + ($item['discount_amount'] * $item['quantity']);
         }, 0);
 
-        // Create order
+        $useSameAddress = $request->boolean('use_same_address');
+
         $order = Order::create([
             'order_number' => 'ORD-' . strtoupper(Str::random(8)),
             'customer_id' => $customer->id,
@@ -279,7 +323,7 @@ class CheckoutController extends Controller
             'subtotal' => $subtotal,
             'original_subtotal' => $originalSubtotal,
             'discount_amount' => $totalOrderDiscount,
-            'tax' => $totalGst, // Using tax field for GST
+            'tax' => $totalGst,
             'shipping' => $shipping,
             'total' => $total,
             'status' => 'pending',
@@ -289,16 +333,15 @@ class CheckoutController extends Controller
             'billing_state' => $request->billing_state,
             'billing_zip' => $request->billing_zip,
             'billing_country' => $request->billing_country,
-            'shipping_address' => $request->use_same_address ? $request->billing_address : $request->shipping_address,
-            'shipping_city' => $request->use_same_address ? $request->billing_city : $request->shipping_city,
-            'shipping_state' => $request->use_same_address ? $request->billing_state : $request->shipping_state,
-            'shipping_zip' => $request->use_same_address ? $request->billing_zip : $request->shipping_zip,
-            'shipping_country' => $request->use_same_address ? $request->billing_country : $request->shipping_country,
+            'shipping_address' => $useSameAddress ? $request->billing_address : $request->shipping_address,
+            'shipping_city' => $useSameAddress ? $request->billing_city : $request->shipping_city,
+            'shipping_state' => $useSameAddress ? $request->billing_state : $request->shipping_state,
+            'shipping_zip' => $useSameAddress ? $request->billing_zip : $request->shipping_zip,
+            'shipping_country' => $useSameAddress ? $request->billing_country : $request->shipping_country,
             'b2b_discount_amount' => $b2bDiscountAmount,
             'bank_transfer_discount_amount' => $btDiscountAmount,
         ]);
-        
-        // Create order items
+
         foreach ($items as $item) {
             OrderItem::create([
                 'order_id' => $order->id,
@@ -319,59 +362,41 @@ class CheckoutController extends Controller
                 'color' => $item['color'],
             ]);
         }
-        
-        // --- START OF NEW NOTIFICATION LOGIC ---
+
         try {
-            // 1. Send Automatic Email to Dealer
-            // Make sure you have created the OrderPlaced mailable: php artisan make:mail OrderPlaced
             Mail::to($customer->email)->send(new OrderPlacedMail($order));
-
-            // 2. Send Automatic WhatsApp to Dealer
-            // We use a helper function to keep the logic clean
             $this->sendWhatsAppNotification($customer->phone, $order);
-
         } catch (\Exception $e) {
-            // We log the error so the order processing doesn't stop if the API is down
-            \Log::error("B2B Order Notification Error: " . $e->getMessage());
+            Log::error("B2B Order Notification Error: " . $e->getMessage());
         }
-        // --- END OF NEW NOTIFICATION LOGIC ---
 
-        // --- START OF FIREBASE NOTIFICATION LOGIC ---
         try {
             app(\App\Services\FirebaseNotificationService::class)->sendNotification(
-                'admin', // Topic name
+                'admin',
                 'New Order Placed!',
                 "A new order (#{$order->order_number}) has been placed.",
                 ['icon' => 'success', 'order_id' => $order->id]
             );
         } catch (\Exception $e) {
-            \Log::error("Firebase Notification Error: " . $e->getMessage());
+            Log::error("Firebase Notification Error: " . $e->getMessage());
         }
-        // --- END OF FIREBASE NOTIFICATION LOGIC ---
 
-        // Clear the cart
         session()->forget('cart');
-        
+
         return redirect()->route('checkout.success', $order)->with('success', 'Your order has been placed successfully!');
     }
 
-    /**
-     * This is the function you are missing. 
-     * It handles the connection to the WhatsApp API.
-     */
     private function sendWhatsAppNotification($phone, $order)
     {
-        // 1. Get credentials from your .env file
         $apiUrl = env('WHATSAPP_API_URL');
         $apiKey = env('WHATSAPP_API_KEY');
         $templateName = env('WHATSAPP_TEMPLATE_NAME');
 
         if (empty($apiUrl) || empty($apiKey)) {
-            \Log::warning("WhatsApp API credentials are not set in .env. Skipping WhatsApp notification.");
+            Log::warning("WhatsApp API credentials missing.");
             return false;
         }
 
-        // 2. Make the API Call
         return Http::withHeaders([
             'Authorization' => 'Bearer ' . $apiKey,
             'Content-Type' => 'application/json',
@@ -386,37 +411,28 @@ class CheckoutController extends Controller
                     [
                         'type' => 'body',
                         'parameters' => [
-                            ['type' => 'text', 'text' => $order->order_number], // Variable 1 in template
-                            ['type' => 'text', 'text' => $order->total],        // Variable 2 in template
+                            ['type' => 'text', 'text' => $order->order_number],
+                            ['type' => 'text', 'text' => $order->total],
                         ]
                     ]
                 ]
             ]
         ]);
     }
-    
-    /**
-     * Display the checkout success page.
-     *
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\View\View
-     */
+
     public function success(Order $order)
     {
-        // Check if user is logged in
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Please login to view your order.');
         }
-        
-        // Get customer
+
         $user = Auth::user();
         $customer = Customer::where('email', $user->email)->first();
-        
-        // Ensure the order belongs to the current customer
+
         if ($order->customer_id != $customer->id) {
             return redirect()->route('home')->with('error', 'You are not authorized to view this order.');
         }
-        
+
         return view('frontend.checkout.success', compact('order'));
     }
 }

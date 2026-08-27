@@ -255,6 +255,16 @@
             line-height: 1.6;
         }
 
+        .unit-badge {
+            background-color: #e0e7ff;
+            color: #4338ca;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
         @media (max-width: 768px) {
             .col-md-6 {
                 flex: 0 0 100%;
@@ -298,10 +308,6 @@
                         <div class="info-value">{{ $order->order_number }}</div>
                     </div>
                     <div class="info-group">
-                        <div class="info-label">Order Date</div>
-                        <div class="info-value">{{ $order->created_at->format('M d, Y H:i') }}</div>
-                    </div>
-                    <div class="info-group">
                         <div class="info-label">Customer Name</div>
                         <div class="info-value">{{ $order->customer->name }}</div>
                     </div>
@@ -320,25 +326,27 @@
                         </div>
                     </div>
                     <div class="info-group">
-                        <div class="info-label">Allocated At</div>
-                        <div class="info-value">{{ $order->allocated_at ? $order->allocated_at->format('M d, Y H:i') : 'N/A' }}</div>
+                        <div class="info-label">Allocated At (Asia/Kolkata)</div>
+                        <div class="info-value">{{ $order->allocated_at ? $order->allocated_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') : 'N/A' }}</div>
                     </div>
                     @if($order->tentative_dispatch_date)
                     <div class="info-group">
-                        <div class="info-label">Tentative Dispatch Date</div>
-                        <div class="info-value" style="color: #667eea; font-weight: bold;">{{ \Carbon\Carbon::parse($order->tentative_dispatch_date)->format('M d, Y') }}</div>
+                        <div class="info-label">Tentative Dispatch Date (Asia/Kolkata)</div>
+                        <div class="info-value" style="color: #667eea; font-weight: bold;">
+                            {{ \Carbon\Carbon::parse($order->tentative_dispatch_date)->timezone('Asia/Kolkata')->format('M d, Y') }}
+                        </div>
                     </div>
                     @endif
                     @if($order->completed_at)
                     <div class="info-group">
-                        <div class="info-label">Completed At</div>
-                        <div class="info-value">{{ $order->completed_at->format('M d, Y H:i') }}</div>
+                        <div class="info-label">Completed At (Asia/Kolkata)</div>
+                        <div class="info-value">{{ $order->completed_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</div>
                     </div>
                     @endif
                     @if($order->dispatched_at)
                     <div class="info-group">
-                        <div class="info-label">Dispatched At</div>
-                        <div class="info-value">{{ $order->dispatched_at->format('M d, Y H:i') }}</div>
+                        <div class="info-label">Dispatched At (Asia/Kolkata)</div>
+                        <div class="info-value">{{ $order->dispatched_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</div>
                     </div>
                     @endif
                 </div>
@@ -381,7 +389,7 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Product</th>
+                            <th>Product Details</th>
                             <th>SKU</th>
                             <th>Ordered</th>
                             <th>Manufactured</th>
@@ -401,8 +409,8 @@
                                             @if($item->color) | Color: {{ $item->color }} @endif
                                         </div>
                                     @endif
-                                    <div style="font-size: 11px; color: #666; font-style: italic;">
-                                        ({{ $item->per_unit_pieces }} pcs per unit)
+                                    <div style="margin-top: 4px;">
+                                        <span class="unit-badge">1 Unit = {{ $item->per_unit_pieces ?? 1 }} pcs</span>
                                     </div>
                                 </td>
                                 <td>{{ $item->product_sku }}</td>
@@ -456,59 +464,82 @@
                     @csrf
                     @method('PUT')
                     <div class="form-group">
-                        <label>How many pieces have been processed now?</label>
+                        <label style="font-weight: 600; margin-bottom: 12px; display: block;">How many pieces have been processed now?</label>
                         @foreach($order->items as $item)
                         @if($item->has_manufacturing_pending)
-                                <div class="form-group" style="background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 15px;">
-                                    <label style="display: block; font-weight: 700; color: #333; margin-bottom: 8px;">
-                                        {{ $item->product_name }}
+                            @php
+                                $perUnit = max($item->per_unit_pieces ?? 1, 1);
+                            @endphp
+                            <div class="form-group" style="background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <div>
+                                        <strong style="color: #333; font-size: 15px;">{{ $item->product_name }}</strong>
+                                        <div style="margin-top: 3px;">
+                                            <span class="unit-badge">1 Unit = {{ $perUnit }} Pcs</span>
+                                        </div>
                                         @if($item->size || $item->thickness || $item->color)
-                                            <span style="font-size: 10px; color: #4338ca; display: block; text-transform: uppercase;">
+                                            <span style="font-size: 10px; color: #4338ca; display: block; text-transform: uppercase; margin-top: 3px;">
                                                 @if($item->size) Size: {{ $item->size }} @endif
                                                 @if($item->thickness) | Thk: {{ $item->thickness }} @endif
                                                 @if($item->color) | Color: {{ $item->color }} @endif
                                             </span>
                                         @endif
-                                        <span style="color: #666; font-weight: normal; float: right;">
-                                            Pending: <strong>{{ $item->manufacturing_pending_pieces }} pcs</strong>
-                                            <em style="font-size: 11px; color: #aaa;">(= {{ number_format($item->manufacturing_pending_pieces / max($item->per_unit_pieces, 1), 2) }} units)</em>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span style="color: #666; font-size: 13px;">
+                                            Pending: <strong style="color: #e67e22;">{{ $item->manufacturing_pending_pieces }} pcs</strong>
                                         </span>
-                                    </label>
-                                    <div style="display: flex; gap: 10px;">
-                                        <div style="flex: 1;">
-                                            <label style="font-size: 12px; color: #666; font-weight: 600;">Completed Pieces</label>
-                                            <input type="text" 
-                                                   name="completed_pieces[{{ $item->id }}]" 
-                                                   class="form-control" 
-                                                   min="0" 
-                                                   max="{{ $item->manufacturing_pending_pieces }}" 
-                                                   value="0"
-                                                   placeholder="Pieces">
-                                        </div>
-                                        <div style="flex: 1;">
-                                            <label style="font-size: 12px; color: #dc3545; font-weight: 600;">Rejected Pieces</label>
-                                            <input type="text" 
-                                                   name="rejected_pieces[{{ $item->id }}]" 
-                                                   class="form-control" 
-                                                   min="0" 
-                                                   max="{{ $item->manufacturing_pending_pieces }}" 
-                                                   value="0"
-                                                   placeholder="Pieces"
-                                                   style="border-color: #dc3545;">
+                                        <div style="font-size: 11px; color: #888; font-style: italic;">
+                                            (= {{ number_format($item->manufacturing_pending_pieces / $perUnit, 2) }} units)
                                         </div>
                                     </div>
-                                    <div style="margin-top: 10px;">
-                                        <input type="text" 
-                                               name="rejection_reasons[{{ $item->id }}]" 
-                                               class="form-control" 
-                                               placeholder="Reason for rejection (optional)"
-                                               style="font-size: 14px;">
-                                    </div>
-                                    <small style="color: #888; display: block; margin-top: 5px;">
-                                        Total pieces (Completed + Rejected) cannot exceed pending pieces ({{ $item->manufacturing_pending_pieces }}).
-                                    </small>
                                 </div>
-                            @endif
+
+                                <div style="display: flex; gap: 15px;">
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 12px; color: #28a745; font-weight: 600;">Completed Pieces</label>
+                                        <input type="number" 
+                                               name="completed_pieces[{{ $item->id }}]" 
+                                               id="completed_{{ $item->id }}"
+                                               class="form-control" 
+                                               min="0" 
+                                               max="{{ $item->manufacturing_pending_pieces }}" 
+                                               value="0"
+                                               placeholder="Pieces"
+                                               oninput="document.getElementById('comp_unit_{{ $item->id }}').innerText = (this.value / {{ $perUnit }}).toFixed(2)">
+                                        <small style="color: #888; display: block; margin-top: 3px;">
+                                            = <span id="comp_unit_{{ $item->id }}">0.00</span> units
+                                        </small>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 12px; color: #dc3545; font-weight: 600;">Rejected Pieces</label>
+                                        <input type="number" 
+                                               name="rejected_pieces[{{ $item->id }}]" 
+                                               id="rejected_{{ $item->id }}"
+                                               class="form-control" 
+                                               min="0" 
+                                               max="{{ $item->manufacturing_pending_pieces }}" 
+                                               value="0"
+                                               placeholder="Pieces"
+                                               style="border-color: #dc3545;"
+                                               oninput="document.getElementById('rej_unit_{{ $item->id }}').innerText = (this.value / {{ $perUnit }}).toFixed(2)">
+                                        <small style="color: #888; display: block; margin-top: 3px;">
+                                            = <span id="rej_unit_{{ $item->id }}">0.00</span> units
+                                        </small>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <input type="text" 
+                                           name="rejection_reasons[{{ $item->id }}]" 
+                                           class="form-control" 
+                                           placeholder="Reason for rejection (optional)"
+                                           style="font-size: 14px;">
+                                </div>
+                                <small style="color: #888; display: block; margin-top: 5px;">
+                                    Total pieces (Completed + Rejected) cannot exceed pending pieces ({{ $item->manufacturing_pending_pieces }} pcs).
+                                </small>
+                            </div>
+                        @endif
                         @endforeach
                     </div>
                     <button type="submit" class="btn btn-success" style="width: 100%; padding: 15px;">Submit Manufacturing Progress (In Pieces)</button>
@@ -544,9 +575,13 @@
                     </div>
 
                     @foreach($order->items as $item)
+                    @php
+                        $perUnitCorr = max($item->per_unit_pieces ?? 1, 1);
+                    @endphp
                     <div class="form-group" style="background: #f8fff8; padding: 15px; border-radius: 10px; border: 1px solid #c3e6cb; margin-bottom: 15px;">
                         <label style="display: block; font-weight: 700; color: #333; margin-bottom: 12px; font-size: 14px;">
                             {{ $item->product_name }}
+                            <span class="unit-badge" style="margin-left: 5px;">1 Unit = {{ $perUnitCorr }} Pcs</span>
                             @if($item->size || $item->thickness || $item->color)
                                 <span style="font-size: 10px; color: #4338ca; display: block; text-transform: uppercase; font-weight: 600;">
                                     @if($item->size) Size: {{ $item->size }} @endif
@@ -570,8 +605,11 @@
                                        min="0" 
                                        max="{{ $item->total_pieces }}"
                                        value="{{ $item->manufactured_pieces }}"
-                                       style="border-color: #28a745; font-size: 18px; font-weight: 700;">
-                                <small style="color: #888;">= {{ number_format($item->manufactured_pieces / max($item->per_unit_pieces, 1), 2) }} units currently</small>
+                                       style="border-color: #28a745; font-size: 18px; font-weight: 700;"
+                                       oninput="document.getElementById('corr_comp_{{ $item->id }}').innerText = (this.value / {{ $perUnitCorr }}).toFixed(2)">
+                                <small style="color: #888;">
+                                    = <span id="corr_comp_{{ $item->id }}">{{ number_format($item->manufactured_pieces / $perUnitCorr, 2) }}</span> units
+                                </small>
                             </div>
                             <div style="flex: 1;">
                                 <label style="font-size: 12px; color: #dc3545; font-weight: 700;">
@@ -584,8 +622,11 @@
                                        min="0" 
                                        max="{{ $item->total_pieces }}"
                                        value="{{ $item->rejected_pieces }}"
-                                       style="border-color: #dc3545; font-size: 18px; font-weight: 700;">
-                                <small style="color: #888;">= {{ number_format($item->rejected_pieces / max($item->per_unit_pieces, 1), 2) }} units currently</small>
+                                       style="border-color: #dc3545; font-size: 18px; font-weight: 700;"
+                                       oninput="document.getElementById('corr_rej_{{ $item->id }}').innerText = (this.value / {{ $perUnitCorr }}).toFixed(2)">
+                                <small style="color: #888;">
+                                    = <span id="corr_rej_{{ $item->id }}">{{ number_format($item->rejected_pieces / $perUnitCorr, 2) }}</span> units
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -609,7 +650,9 @@
                     <p style="color: #856404; margin: 8px 0 0; font-size: 13px;">Your request has been sent to admin. Please wait for their approval.</p>
                     <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 5px; font-size: 13px; color: #555; font-style: italic;">
                         "{{ $order->mfg_edit_request_note }}"
-                        <span style="display: block; font-size: 11px; color: #aaa; margin-top: 4px;">Sent: {{ $order->mfg_edit_request_at?->format('M d, Y H:i') }}</span>
+                        <span style="display: block; font-size: 11px; color: #aaa; margin-top: 4px;">
+                            Sent: {{ $order->mfg_edit_request_at ? $order->mfg_edit_request_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') : 'N/A' }}
+                        </span>
                     </div>
                 </div>
                 <div style="text-align: center; font-size: 13px; color: #888;">
@@ -655,7 +698,7 @@
                 <div class="form-group">
                     <label for="manufacturing_status" class="form-label">Select New Status</label>
                     @php
-                        $hasPendingManufacturing = $order->items->sum('manufacturing_pending_quantity') > 0;
+                        $hasPendingManufacturing = $order->items->sum('manufacturing_pending_pieces') > 0;
                     @endphp
                     <select name="manufacturing_status" id="manufacturing_status" class="form-control" required>
                         <option value="">Select status</option>
@@ -670,10 +713,15 @@
                     @endif
                 </div>
                 
-                <div class="form-group" id="tentativeDateGroup" style="{{ $order->manufacturing_status == 'allocated' ? 'display: none;' : 'display: none;' }}">
-                    <label for="tentative_dispatch_date" class="form-label">Tentative Dispatch Date</label>
-                    <input type="date" name="tentative_dispatch_date" id="tentative_dispatch_date" class="form-control" value="{{ $order->tentative_dispatch_date }}" min="{{ date('Y-m-d') }}">
-                    <small style="color: #666; display: block; margin-top: 5px;">Required when accepting an order (Processing status).</small>
+                <div class="form-group" id="tentativeDateGroup" style="{{ $order->manufacturing_status == 'processing' ? 'display: block;' : 'display: none;' }}">
+                    <label for="tentative_dispatch_date" class="form-label">Tentative Dispatch Date (IST)</label>
+                    <input type="date" 
+                           name="tentative_dispatch_date" 
+                           id="tentative_dispatch_date" 
+                           class="form-control" 
+                           value="{{ $order->tentative_dispatch_date ? \Carbon\Carbon::parse($order->tentative_dispatch_date)->timezone('Asia/Kolkata')->format('Y-m-d') : '' }}" 
+                           min="{{ \Carbon\Carbon::now('Asia/Kolkata')->format('Y-m-d') }}">
+                    <small style="color: #666; display: block; margin-top: 5px;">Required when accepting or keeping the order in 'Processing' status.</small>
                 </div>
                 
                 <script>
@@ -689,9 +737,9 @@
                         }
                     });
                     
-                    // Trigger on load if it's already processing or allocated
                     if (document.getElementById('manufacturing_status').value === 'processing') {
                         document.getElementById('tentativeDateGroup').style.display = 'block';
+                        document.getElementById('tentative_dispatch_date').required = true;
                     }
                 </script>
 

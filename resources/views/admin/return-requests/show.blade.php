@@ -312,17 +312,16 @@
 
                 {{-- Dealer zero-points notice --}}
                 @if($returnRequest->customer && $returnRequest->customer->customer_type === 'dealer' && $returnRequest->customer->loyalty_points <= 0)
-                <div class="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3">
-                    <div class="w-8 h-8 flex-shrink-0 rounded-xl bg-blue-200 text-blue-700 flex items-center justify-center mt-0.5">
+                <div class="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+                    <div class="w-8 h-8 flex-shrink-0 rounded-xl bg-amber-200 text-amber-700 flex items-center justify-center mt-0.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z"/>
                         </svg>
                     </div>
                     <div>
-                        <!-- <p class="text-[11px] font-black text-blue-800 uppercase tracking-widest">Customer Has 0 Loyalty Points</p> -->
-                        <p class="text-xs text-blue-700 mt-1 font-medium">
-                            <strong></strong> Currently has <strong>0 pts</strong>.
-                            
+                        <p class="text-[11px] font-black text-amber-800 uppercase tracking-widest">Customer Has {{ $returnRequest->customer->loyalty_points }} Loyalty Points</p>
+                        <p class="text-xs text-amber-700 mt-1 font-medium">
+                            Approving this request will drive the customer's loyalty points into the negative.
                         </p>
                     </div>
                 </div>
@@ -335,22 +334,7 @@
                     <input type="hidden" name="note_type" value="debit">
                     <input type="hidden" name="adjustment_amount" value="0">
 
-                    @php
-                        $dealerZeroPoints = $returnRequest->customer
-                            && $returnRequest->customer->customer_type === 'dealer'
-                            && $returnRequest->customer->loyalty_points <= 0;
-                    @endphp
-
-                    @if($dealerZeroPoints)
-                        {{-- Blocked: dealer has 0 points --}}
-                        <div class="w-full py-3 px-4 bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-1 cursor-not-allowed">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Cannot Approve</span>
-                            <span class="text-[10px] text-slate-400 font-medium text-center">
-                                Customer <strong>{{ $returnRequest->customer->name }}</strong> has <strong>0 loyalty points</strong>.<br>
-                                Approval requires the customer to have points available to deduct.
-                            </span>
-                        </div>
-                    @elseif($rrIsZero)
+                    @if($rrIsZero)
                         <button type="button" onclick="document.getElementById('zeroConfirmModal').classList.remove('hidden')"
                             class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-100 transition-all active:scale-95">
                             Approve Request
