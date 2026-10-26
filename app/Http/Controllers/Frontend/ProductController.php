@@ -8,16 +8,21 @@ use App\Models\Product;
 use App\Models\Subcategory;
 use App\Models\SubSubcategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of products.
      *
-     * @return \Illuminate\View\View
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
     public function index(Request $request)
     {
+        if (Auth::check() && Auth::user()->customer && Auth::user()->customer->customer_type === 'dealer') {
+            return redirect()->route('b2b.products', $request->query());
+        }
+
         $query = Product::where('is_active', true)->with('images');
         
         if ($request->has('category')) {
@@ -58,6 +63,10 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
+        if (Auth::check() && Auth::user()->customer && Auth::user()->customer->customer_type === 'dealer') {
+            return redirect()->route('b2b.products.show', $product);
+        }
+
         if (!$product->is_active) {
             abort(404);
         }

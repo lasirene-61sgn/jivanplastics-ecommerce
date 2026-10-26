@@ -238,6 +238,10 @@
             @else
             <!-- Product Grid -->
             @if($products->count() > 0)
+            @php
+                $cart = session('cart', []);
+                $cartProductIds = collect($cart)->pluck('product_id')->map(fn($id) => (int)$id)->unique()->values()->toArray();
+            @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 @foreach($products as $product)
                 <div class="group bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-500">
@@ -291,6 +295,8 @@
                                     selectedSize: '{{ trim($productSizes[0] ?? '') }}',
                                     selectedThickness: '{{ trim($productThicknesses[0] ?? '') }}',
                                     selectedColor: '{{ trim($productColors[0] ?? '') }}',
+                                    isInCart: {{ in_array((int)$product->id, $cartProductIds) ? 'true' : 'false' }},
+                                    isAdding: false,
                                     
                                     get activeVariation() {
                                         const trim = (s) => (s || '').toString().trim();
@@ -339,6 +345,11 @@
                                         this.$watch('selectedThickness', () => this.validateSelection());
                                         // Run once to ensure initial state is valid
                                         this.validateSelection();
+                                        window.addEventListener('cart-updated', (e) => {
+                                            if (e.detail && Array.isArray(e.detail.cart_product_ids)) {
+                                                this.isInCart = e.detail.cart_product_ids.map(Number).includes({{ (int)$product->id }});
+                                            }
+                                        });
                                     },
                                     get currentPieces() {
                                         return this.activeVariation ? parseInt(this.activeVariation.total_pieces) : this.basePieces;
@@ -425,11 +436,11 @@
 
                             <div class="mt-4 space-y-2">
                                 <div class="flex items-baseline gap-2">
-                                    <span class="text-[14px] font-black text-slate-400 uppercase tracking-widest">Net Rate (Per PC):</span>
+                                    <span class="text-[14px] font-black text-slate-400 uppercase tracking-widest">Price per Rate Plus GST:</span>
                                     <span class="text-lg font-black text-slate-900 tracking-tighter">₹<span x-text="pieceNetRate"></span></span>
                                 </div>
                                 <div class="flex items-baseline gap-2">
-                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit Rate (Excl. GST):</span>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price/Cartoon Plus GST:</span>
                                     <span class="text-xl font-black text-red-600 tracking-tighter">₹<span x-text="unitPrice.toFixed(2)"></span></span>
                                     <template x-if="unitPrice < originalUnitPrice">
                                         <span class="text-xs line-through text-slate-300 font-bold">₹<span x-text="originalUnitPrice.toFixed(2)"></span></span>
@@ -486,18 +497,16 @@
 
                         <!-- Actions -->
                         <form action="{{ route('cart.add', $product->id) }}" method="POST" @submit.prevent="
-                            let form = $event.target;
-                            let submitBtn = form.querySelector('button[type=submit]');
-                            let originalText = submitBtn.innerHTML;
-                            submitBtn.disabled = true;
+                            if (!canAddToCart || isAdding) return;
                             
-                            // Change text inside the span if it exists, otherwise the button itself
-                            let spanEl = submitBtn.querySelector('span');
-                            if (spanEl) {
-                                spanEl.innerText = 'Adding...';
-                            } else {
-                                submitBtn.innerHTML = 'Adding...';
+                            if (isInCart) {
+                                if (!confirm('This product is already in your cart. Do you want to add more to cart?')) {
+                                    return;
+                                }
                             }
+                            
+                            let form = $event.target;
+                            isAdding = true;
                             
                             fetch(form.action, {
                                 method: 'POST',
@@ -509,12 +518,9 @@
                             })
                             .then(response => response.json())
                             .then(data => {
+                                isAdding = false;
                                 if(data.success) {
-                                    if (spanEl) spanEl.innerText = 'Added \u2713';
-                                    else submitBtn.innerHTML = 'Added \u2713';
-                                    
-                                    submitBtn.classList.remove('bg-slate-900', 'hover:bg-red-600');
-                                    submitBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700');
+                                    isInCart = true;
                                     
                                     // Update global cart counts if they exist
                                     let cartCountEls = document.querySelectorAll('.cart-count, .cart-counter, [data-cart-count]');
@@ -523,31 +529,21 @@
                                         el.style.display = data.cart_count > 0 ? 'flex' : 'none';
                                     });
                                     
+                                    window.dispatchEvent(new CustomEvent('cart-updated', { detail: data }));
+                                    
                                     if(typeof notyf !== 'undefined') notyf.success(data.message);
                                     else if(typeof toastr !== 'undefined') toastr.success(data.message);
-                                    
-                                    setTimeout(() => {
-                                        submitBtn.disabled = false;
-                                        submitBtn.innerHTML = originalText;
-                                        submitBtn.classList.add('bg-slate-900', 'hover:bg-red-600');
-                                        submitBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
-                                    }, 2000);
                                 } else {
                                     if(typeof notyf !== 'undefined') notyf.error(data.message || 'Error adding to cart');
                                     else if(typeof toastr !== 'undefined') toastr.error(data.message || 'Error adding to cart');
                                     else alert(data.message || 'Error adding to cart');
-                                    
-                                    submitBtn.disabled = false;
-                                    submitBtn.innerHTML = originalText;
                                 }
                             })
                             .catch(error => {
+                                isAdding = false;
                                 if(typeof notyf !== 'undefined') notyf.error('Error adding to cart');
                                 else if(typeof toastr !== 'undefined') toastr.error('Error adding to cart');
                                 else alert('Error adding to cart');
-                                
-                                submitBtn.disabled = false;
-                                submitBtn.innerHTML = originalText;
                             });
                         ">
                             @csrf
@@ -557,13 +553,26 @@
                             <input type="hidden" name="color" :value="selectedColor">
 
                             <button type="submit"
-                                :disabled="!canAddToCart"
-                                :class="!canAddToCart ? 'bg-slate-200 cursor-not-allowed text-slate-400' : 'bg-slate-900 text-white hover:bg-red-600 shadow-xl shadow-slate-200'"
+                                :disabled="!canAddToCart || isAdding"
+                                :class="!canAddToCart ? 'bg-slate-200 cursor-not-allowed text-slate-400' : (isInCart ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-200' : 'bg-slate-900 text-white hover:bg-red-600 shadow-xl shadow-slate-200')"
                                 class="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                <span x-text="canAddToCart ? 'Add To Cart' : 'Select Options' "></span>
+                                <template x-if="isAdding">
+                                    <svg class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </template>
+                                <template x-if="!isAdding && isInCart">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </template>
+                                <template x-if="!isAdding && !isInCart">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                </template>
+                                <span x-text="!canAddToCart ? 'Select Options' : (isAdding ? (isInCart ? 'Adding More...' : 'Adding...') : (isInCart ? 'Already in Cart ✓' : 'Add To Cart'))"></span>
                             </button>
                         </form>
                     </div>

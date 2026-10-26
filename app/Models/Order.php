@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class Order extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'order_number',
         'customer_id',
@@ -45,6 +45,11 @@ class Order extends Model
         'mfg_edit_request_at',
         'mfg_edit_permission_granted',
         'mfg_edit_permission_count',
+        'accepted_at',
+        'rejected_at',
+        'rejection_reason',
+        'mfg_accepted_at',
+        'mfg_completed_at',
     ];
 
     protected $casts = [
@@ -64,6 +69,10 @@ class Order extends Model
         'mfg_edit_request_at' => 'datetime',
         'mfg_edit_permission_granted' => 'boolean',
         'mfg_edit_permission_count' => 'integer',
+        'accepted_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'mfg_accepted_at' => 'datetime',
+        'mfg_completed_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -75,7 +84,7 @@ class Order extends Model
                 $order->order_number = 'ORD-' . strtoupper(Str::random(8));
             }
         });
-        
+
         // Award loyalty points when order is completed
         static::updated(function ($order) {
             // Check if the order status changed to completed
@@ -94,12 +103,12 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
-    
+
     public function manufacturingTeam()
     {
         return $this->belongsTo(ManufacturingTeam::class);
     }
-    
+
     /**
      * Get the total pending quantity across all items in this order.
      *
@@ -119,7 +128,7 @@ class Order extends Model
     {
         return $this->items->sum('rejected_quantity');
     }
-    
+
     /**
      * Get the total dispatched quantity across all items in this order.
      *
@@ -129,7 +138,7 @@ class Order extends Model
     {
         return $this->items->sum('dispatched_quantity');
     }
-    
+
     /**
      * Check if this order is fully dispatched.
      *
@@ -139,7 +148,7 @@ class Order extends Model
     {
         return $this->total_pending_quantity <= 0;
     }
-    
+
     /**
      * Check if this order has pending items to dispatch.
      *
@@ -149,7 +158,7 @@ class Order extends Model
     {
         return $this->total_pending_quantity > 0;
     }
-    
+
     /**
      * Get return requests for this order.
      *
@@ -159,7 +168,7 @@ class Order extends Model
     {
         return $this->hasMany(ReturnRequest::class);
     }
-    
+
     /**
      * Get dispatch images for this order.
      *
@@ -179,7 +188,17 @@ class Order extends Model
     {
         return $this->hasMany(Invoice::class);
     }
-    
+
+    /**
+     * Get production logs for this order.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function productionLogs()
+    {
+        return $this->hasMany(OrderProductionLog::class)->orderBy('created_at', 'asc');
+    }
+
     /**
      * Get the total discount amount for the order.
      *
@@ -189,7 +208,7 @@ class Order extends Model
     {
         return (float) ($this->discount_amount ?? 0);
     }
-    
+
     /**
      * Calculate loyalty points for the order.
      *
@@ -201,16 +220,16 @@ class Order extends Model
         if ($this->customer_type !== 'dealer') {
             return 0;
         }
-        
+
         // Only orders above ₹2000 earn points
         if ($this->total <= 2000) {
             return 0;
         }
-        
+
         // 1 point per ₹1000 on the total order value
         return floor($this->total / 1000);
     }
-    
+
     /**
      * Award loyalty points to the customer for this order.
      *
@@ -222,9 +241,9 @@ class Order extends Model
         if ($this->customer_type !== 'dealer') {
             return;
         }
-        
+
         $points = $this->calculateLoyaltyPoints();
-        
+
         if ($points > 0 && $this->customer) {
             $this->customer->addLoyaltyPoints($points);
         }

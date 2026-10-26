@@ -256,7 +256,7 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path d="M4 6h16M4 12h16M4 18h16"></path>
                                 </svg>
-                                Products
+                                Place Orders
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path d="M19 9l-7 7-7-7"></path>
                                 </svg>

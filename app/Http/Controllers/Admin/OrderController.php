@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 
 class OrderController extends Controller
 {
@@ -88,7 +89,7 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load('items.product', 'customer', 'manufacturingTeam', 'returnRequests.orderItem', 'returnRequests.invoice');
+        $order->load('items.product', 'customer', 'manufacturingTeam', 'returnRequests.orderItem', 'returnRequests.invoice', 'productionLogs.orderItem', 'invoices.items.orderItem');
         $manufacturingTeams = ManufacturingTeam::where('is_active', true)->get();
         
         return view('admin.orders.show', compact('order', 'manufacturingTeams'));
@@ -115,17 +116,34 @@ class OrderController extends Controller
      * @param  \App\Models\Order  $order
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Request $request, Order $order)
+    public function update(UpdateOrderStatusRequest $request, Order $order)
     {
-        $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled,accepted,rejected',
-        ]);
+        $status = $request->validated('status');
 
-        $order->update([
-            'status' => $request->status,
-        ]);
+        $updateData = [
+            'status' => $status,
+        ];
 
-        return redirect()->back()->with('success', 'Order status updated successfully.');
+        // Track timestamps dynamically based on status
+        if ($status === 'accepted') {
+            $updateData['accepted_at'] = now();
+            // Clear rejected_at if previously rejected and now accepted
+            $updateData['rejected_at'] = null;
+        } elseif ($status === 'rejected') {
+            $updateData['rejected_at'] = now();
+            // Clear accepted_at if previously accepted and now rejected
+            $updateData['accepted_at'] = null;
+            if ($request->filled('rejection_reason')) {
+                $updateData['rejection_reason'] = $request->rejection_reason;
+            }
+        } elseif ($status === 'completed') {
+            $updateData['completed_at'] = $order->completed_at ?? now();
+        }
+
+        $order->update($updateData);
+
+        $statusLabel = ucfirst($status);
+        return redirect()->back()->with('success', "Order #{$order->order_number} has been {$statusLabel} successfully.");
     }
     
     /**
@@ -456,6 +474,7 @@ class OrderController extends Controller
             'bank_transfer_discount_amount' => $btDiscountAmount,
             'other_charges' => $manualOtherCharges,
             'total' => $total,
+            'dispatched_at' => now(),
         ]);
         
         // Update order totals to include these manual fees if needed? 

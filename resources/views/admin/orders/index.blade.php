@@ -64,7 +64,7 @@
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Per Page</label>
                     <select name="per_page" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white">
-                        @foreach([10, 20, 30, 50, 100, 200, 500] as $num)
+                        @foreach([20, 30, 50, 100, 200, 500] as $num)
                             <option value="{{ $num }}" {{ request('per_page', 20) == $num ? 'selected' : '' }}>{{ $num }}</option>
                         @endforeach
                     </select>

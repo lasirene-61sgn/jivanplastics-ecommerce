@@ -127,7 +127,9 @@ class CartController extends Controller
             return redirect()->back()->with('error', $msg);
         }
         
-        if (isset($cart[$cartKey])) {
+        $isExisting = isset($cart[$cartKey]);
+
+        if ($isExisting) {
             $newQuantity = $cart[$cartKey]['quantity'] + $requestedQuantity;
             
             // Re-validate MOQ when updating existing cart item
@@ -209,15 +211,19 @@ class CartController extends Controller
         
         session()->put('cart', $cart);
         
+        $successMsg = $isExisting ? 'Product quantity updated in cart successfully!' : 'Product added to cart successfully!';
+        
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Product added to cart successfully!',
-                'cart_count' => array_sum(array_column($cart, 'quantity'))
+                'message' => $successMsg,
+                'is_already_in_cart' => true,
+                'cart_count' => array_sum(array_column($cart, 'quantity')),
+                'cart_product_ids' => array_values(array_unique(array_column($cart, 'product_id')))
             ]);
         }
         
-        return redirect()->back()->with('success', 'Product added to cart successfully!');
+        return redirect()->back()->with('success', $successMsg);
     }
     
     /**

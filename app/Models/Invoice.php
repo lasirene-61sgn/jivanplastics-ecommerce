@@ -19,6 +19,7 @@ class Invoice extends Model
         'bank_transfer_discount_amount',
         'other_charges',
         'total',
+        'dispatched_at',
     ];
 
     protected $casts = [
@@ -29,6 +30,7 @@ class Invoice extends Model
         'bank_transfer_discount_amount' => 'decimal:2',
         'other_charges' => 'decimal:2',
         'total' => 'decimal:2',
+        'dispatched_at' => 'datetime',
     ];
 
     public function order()

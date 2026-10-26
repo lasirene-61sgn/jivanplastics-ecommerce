@@ -65,12 +65,12 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm font-bold text-slate-500">Current Status:</span>
-                        @php 
-                        $statusColor = $order->status == 'completed' ? 'bg-green-100 text-green-700' : 
-                                       ($order->status == 'processing' ? 'bg-amber-100 text-amber-700' : 
-                                       ($order->status == 'accepted' ? 'bg-sky-100 text-sky-700' : 
-                                       ($order->status == 'under_process' ? 'bg-yellow-100 text-yellow-700' : 
-                                       ($order->status == 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500')))); 
+                        @php
+                        $statusColor = $order->status == 'completed' ? 'bg-green-100 text-green-700' :
+                        ($order->status == 'processing' ? 'bg-amber-100 text-amber-700' :
+                        ($order->status == 'accepted' ? 'bg-sky-100 text-sky-700' :
+                        ($order->status == 'under_process' ? 'bg-yellow-100 text-yellow-700' :
+                        ($order->status == 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'))));
                         @endphp
                         <span class="px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest {{ $statusColor }}">
                             {{ $order->status === 'under_process' ? 'under process' : $order->status }}
@@ -245,11 +245,11 @@
                     if($item->rejected_quantity > 0) {
                     $p = $item->product;
                     $unitPrice = $item->original_price ?? ($p->price ?? $item->price);
-                    
+
                     if ($order->customer_type !== 'dealer' && $item->per_unit_pieces == 1 && $p && $p->per_quantity_pieces > 1) {
-                        if ($unitPrice >= $item->price * $p->per_quantity_pieces * 0.9) {
-                            $unitPrice = $unitPrice / $p->per_quantity_pieces;
-                        }
+                    if ($unitPrice >= $item->price * $p->per_quantity_pieces * 0.9) {
+                    $unitPrice = $unitPrice / $p->per_quantity_pieces;
+                    }
                     }
 
                     $lineOriginalTotal = $unitPrice * $item->rejected_quantity;
@@ -299,394 +299,510 @@
                     <div class="p-2 bg-green-50 text-green-700 rounded-lg">Sent: {{ $order->total_dispatched_quantity }}</div>
                     <div class="p-2 bg-amber-50 text-amber-700 rounded-lg">Pend: {{ $order->total_pending_quantity }}</div>
                 </div>
-                </div>
             </div>
-            
-           
         </div>
 
-        <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl p-1 lg:p-2 border-4 border-slate-800">
-            
+
+    </div>
+
+    <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl p-1 lg:p-2 border-4 border-slate-800">
+
         @if($order->tentative_dispatch_date)
-            <div class="w-full lg:w-96 bg-white rounded-3xl border border-slate-200 p-8 space-y-4 shadow-sm mt-6">
-                <div class="flex justify-between items-center text-sm font-bold text-slate-500">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Tentative Dispatch Date
-                    </span>
-                    <span class="text-indigo-600 font-black px-3 py-1 bg-indigo-50 rounded-lg">{{ \Carbon\Carbon::parse($order->tentative_dispatch_date)->format('M d, Y') }}</span>
-                </div>
+        <div class="w-full lg:w-96 bg-white rounded-3xl border border-slate-200 p-8 space-y-4 shadow-sm mt-6">
+            <div class="flex justify-between items-center text-sm font-bold text-slate-500">
+                <span class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Tentative Dispatch Date
+                </span>
+                <span class="text-indigo-600 font-black px-3 py-1 bg-indigo-50 rounded-lg">{{ \Carbon\Carbon::parse($order->tentative_dispatch_date)->format('M d, Y') }}</span>
             </div>
+        </div>
         @endif
-            <div class="bg-white rounded-[2rem] p-8 lg:p-12">
-                <h5 class="text-xl font-black text-slate-900 tracking-tight mb-8 flex items-center">
-                    <span class="w-1.5 h-8 bg-indigo-600 mr-4 rounded-full"></span>
-                    Manufacturing Control Center
-                </h5>
+        <div class="bg-white rounded-[2rem] p-8 lg:p-12">
+            <h5 class="text-xl font-black text-slate-900 tracking-tight mb-8 flex items-center">
+                <span class="w-1.5 h-8 bg-indigo-600 mr-4 rounded-full"></span>
+                Manufacturing Control Center
+            </h5>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Left Column: Tracking & Allocation -->
-                    <div class="bg-slate-50/50 p-6 lg:p-8 rounded-3xl border border-slate-100 space-y-8">
-                        <div class="flex items-center gap-3 pb-4 border-b border-slate-200">
-                            <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-500">
-                                <i class="fas fa-industry"></i>
-                            </div>
-                            <h6 class="text-sm font-black text-slate-800 uppercase tracking-widest">Allocation & Tracking</h6>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Column: Tracking & Allocation -->
+                <div class="bg-slate-50/50 p-6 lg:p-8 rounded-3xl border border-slate-100 space-y-8">
+                    <div class="flex items-center gap-3 pb-4 border-b border-slate-200">
+                        <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-500">
+                            <i class="fas fa-industry"></i>
                         </div>
+                        <h6 class="text-sm font-black text-slate-800 uppercase tracking-widest">Allocation & Tracking</h6>
+                    </div>
 
-                        {{-- Edit Permission Alert Panel --}}
-                        @if($order->mfg_edit_permission_granted)
-                            <div class="p-4 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-3">
-                                <svg class="w-5 h-5 text-sky-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <div>
-                                    <p class="text-sm font-black text-sky-700">Edit Permission Active</p>
-                                    <p class="text-[10px] font-bold text-sky-600 mt-1 uppercase tracking-widest">Awaiting manufacturer submission.</p>
+                    {{-- Edit Permission Alert Panel --}}
+                    @if($order->mfg_edit_permission_granted)
+                    <div class="p-4 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-3">
+                        <svg class="w-5 h-5 text-sky-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <p class="text-sm font-black text-sky-700">Edit Permission Active</p>
+                            <p class="text-[10px] font-bold text-sky-600 mt-1 uppercase tracking-widest">Awaiting manufacturer submission.</p>
+                        </div>
+                    </div>
+                    @elseif($order->mfg_edit_request_note)
+                    <div class="p-5 bg-amber-50 border border-amber-100 rounded-2xl shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-black text-amber-700">⚠️ Edit Request Pending</p>
+                                <div class="mt-2 p-3 bg-white rounded-xl border border-amber-200 text-xs text-slate-700 italic font-medium">
+                                    "{{ $order->mfg_edit_request_note }}"
+                                </div>
+                                <div class="mt-3">
+                                    @if($order->mfg_edit_permission_count < 2)
+                                        <form action="{{ route('admin.orders.grant-edit', $order) }}" method="POST">
+                                        @csrf
+                                        <button type="submit" onclick="return confirm('Grant edit permission?')"
+                                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest shadow-sm">
+                                            ✅ Grant Access
+                                        </button>
+                                        </form>
+                                        @else
+                                        <span class="px-3 py-1.5 bg-rose-100 text-rose-700 text-[10px] font-black rounded-lg uppercase tracking-widest">⛔ Max Grants Reached</span>
+                                        @endif
                                 </div>
                             </div>
-                        @elseif($order->mfg_edit_request_note)
-                            <div class="p-5 bg-amber-50 border border-amber-100 rounded-2xl shadow-sm">
-                                <div class="flex items-start gap-3">
-                                    <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                    <div class="flex-1">
-                                        <p class="text-sm font-black text-amber-700">⚠️ Edit Request Pending</p>
-                                        <div class="mt-2 p-3 bg-white rounded-xl border border-amber-200 text-xs text-slate-700 italic font-medium">
-                                            "{{ $order->mfg_edit_request_note }}"
-                                        </div>
-                                        <div class="mt-3">
-                                            @if($order->mfg_edit_permission_count < 2)
-                                                <form action="{{ route('admin.orders.grant-edit', $order) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" onclick="return confirm('Grant edit permission?')"
-                                                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest shadow-sm">
-                                                        ✅ Grant Access
-                                                    </button>
-                                                </form>
-                                            @else
-                                                <span class="px-3 py-1.5 bg-rose-100 text-rose-700 text-[10px] font-black rounded-lg uppercase tracking-widest">⛔ Max Grants Reached</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
+                        </div>
+                    </div>
+                    @endif
 
-                        {{-- Edit permissions usage tracker --}}
-                        @if($order->mfg_edit_permission_count > 0 || $order->manufacturing_status == 'processing')
-                        <div class="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-100">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corrections Used:</span>
-                            @for($i = 1; $i <= 2; $i++)
-                                <span class="w-5 h-5 rounded-full text-[9px] font-black flex items-center justify-center {{ $i <= $order->mfg_edit_permission_count ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400' }}">{{ $i }}</span>
+                    {{-- Edit permissions usage tracker --}}
+                    @if($order->mfg_edit_permission_count > 0 || $order->manufacturing_status == 'processing')
+                    <div class="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-100">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corrections Used:</span>
+                        @for($i = 1; $i <= 2; $i++)
+                            <span class="w-5 h-5 rounded-full text-[9px] font-black flex items-center justify-center {{ $i <= $order->mfg_edit_permission_count ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400' }}">{{ $i }}</span>
                             @endfor
                             <span class="text-[9px] font-medium text-slate-400 ml-auto">{{ $order->mfg_edit_permission_count }}/2 Limit</span>
+                    </div>
+                    @endif
+
+                    <div class="space-y-6">
+                        <div>
+                            <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Current Status</h6>
+                            <div class="flex items-center gap-4">
+                                @php $manStatusColor = $order->manufacturing_status == 'completed' ? 'bg-green-100 text-green-700' : ($order->manufacturing_status == 'processing' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'); @endphp
+                                <span class="px-6 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm {{ $manStatusColor }}">
+                                    {{ $order->manufacturing_status }}
+                                </span>
+                            </div>
+                        </div>
+
+                        @if($order->manufacturingTeam)
+                        <div class="space-y-3 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                            <div class="flex justify-between">
+                                <span class="text-xs font-bold text-slate-400 uppercase">Allocated Unit:</span>
+                                <span class="text-xs font-black text-slate-900 underline decoration-indigo-200 decoration-2">{{ $order->manufacturingTeam->factory_name }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs font-bold text-slate-400 uppercase">Assigned At:</span>
+                                <span class="text-xs font-bold text-slate-600">{{ $order->allocated_at ? $order->allocated_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') : 'N/A' }}</span>
+                            </div>
+                        </div>
+                        @else
+                        <div class="p-6 bg-white rounded-2xl border border-dashed border-slate-300 text-center italic text-slate-400 text-sm">
+                            Not currently assigned to any unit.
                         </div>
                         @endif
 
-                        <div class="space-y-6">
-                            <div>
-                                <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Current Status</h6>
-                                <div class="flex items-center gap-4">
-                                    @php $manStatusColor = $order->manufacturing_status == 'completed' ? 'bg-green-100 text-green-700' : ($order->manufacturing_status == 'processing' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'); @endphp
-                                    <span class="px-6 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm {{ $manStatusColor }}">
-                                        {{ $order->manufacturing_status }}
-                                    </span>
-                                </div>
-                            </div>
+                        <div class="pt-2">
+                            <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                                Chronology Timeline
+                            </h6>
 
-                            @if($order->manufacturingTeam)
-                            <div class="space-y-3 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-xs font-bold text-slate-400 uppercase">Allocated Unit:</span>
-                                    <span class="text-xs font-black text-slate-900 underline decoration-indigo-200 decoration-2">{{ $order->manufacturingTeam->factory_name }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-xs font-bold text-slate-400 uppercase">Assigned At:</span>
-                                    <span class="text-xs font-bold text-slate-600">{{ $order->allocated_at ? $order->allocated_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') : 'N/A' }}</span>
-                                </div>
+                            @php
+                            $timelineEvents = collect();
+
+                            // 1. Order Placed by Customer
+                            if ($order->created_at) {
+                                $timelineEvents->push((object)[
+                                    'label' => 'Order Placed by Customer',
+                                    'date' => $order->created_at,
+                                    'color' => 'bg-slate-500',
+                                    'badge' => 'Customer'
+                                ]);
+                            }
+
+                            // 2. Admin Accept / Reject
+                            if ($order->status === 'rejected') {
+                                $rejectedDate = $order->rejected_at ?? $order->updated_at ?? ($order->created_at ? $order->created_at->copy()->addMinute() : now());
+                                $timelineEvents->push((object)[
+                                    'label' => 'Admin Rejected Order' . ($order->rejection_reason ? ' (' . $order->rejection_reason . ')' : ''),
+                                    'date' => $rejectedDate,
+                                    'color' => 'bg-rose-500',
+                                    'badge' => 'Admin'
+                                ]);
+                            } elseif ($order->status != 'pending') {
+                                $acceptedDate = $order->accepted_at ?? ($order->created_at ? $order->created_at->copy()->addMinute() : ($order->updated_at ?? now()));
+                                $timelineEvents->push((object)[
+                                    'label' => 'Admin Accepted Order',
+                                    'date' => $acceptedDate,
+                                    'color' => 'bg-emerald-500',
+                                    'badge' => 'Admin'
+                                ]);
+                            }
+
+                            // 3. Admin Allocated to Manufacturing Unit
+                            if ($order->allocated_at) {
+                                $factoryName = $order->manufacturingTeam ? $order->manufacturingTeam->factory_name : 'Manufacturing Unit';
+                                $timelineEvents->push((object)[
+                                    'label' => 'Admin Allocated Order to ' . $factoryName,
+                                    'date' => $order->allocated_at,
+                                    'color' => 'bg-indigo-500',
+                                    'badge' => 'Admin'
+                                ]);
+                            }
+
+                            // 4. Manufacturer Accepted Order & Started Processing
+                            $mfgAcceptedDate = $order->mfg_accepted_at ?? ($order->manufacturing_status && $order->manufacturing_status !== 'allocated' && $order->manufacturing_status !== 'pending' && $order->allocated_at ? $order->allocated_at->copy()->addMinute() : null);
+                            if ($mfgAcceptedDate) {
+                                $factoryName = $order->manufacturingTeam ? $order->manufacturingTeam->factory_name : 'Manufacturing Unit';
+                                $timelineEvents->push((object)[
+                                    'label' => 'Manufacturer (' . $factoryName . ') Accepted Order & Started Processing',
+                                    'date' => $mfgAcceptedDate,
+                                    'color' => 'bg-amber-500',
+                                    'badge' => 'Manufacturer'
+                                ]);
+                            }
+
+                            // 5. Tentative Dispatch Date Set by Manufacturer
+                            if ($order->tentative_dispatch_date) {
+                                $targetDateFormatted = \Carbon\Carbon::parse($order->tentative_dispatch_date)->timezone('Asia/Kolkata')->format('d M, Y');
+                                $setDate = $order->mfg_accepted_at ?? ($order->allocated_at ? $order->allocated_at->copy()->addSeconds(30) : ($order->created_at ?? now()));
+                                $timelineEvents->push((object)[
+                                    'label' => 'Manufacturer Set Tentative Dispatch Date: ' . $targetDateFormatted,
+                                    'date' => $setDate,
+                                    'color' => 'bg-cyan-500',
+                                    'badge' => 'Target Date'
+                                ]);
+                            }
+
+                            // 6. Manufacturer Partial Completions (How many products completed)
+                            if ($order->productionLogs && $order->productionLogs->count() > 0) {
+                                foreach ($order->productionLogs as $pIndex => $pLog) {
+                                    $prodItemName = $pLog->orderItem ? ($pLog->orderItem->product_name ?? 'Product') : 'Product';
+                                    $prodPieces = number_format($pLog->pieces_completed);
+                                    $rejInfo = $pLog->pieces_rejected > 0 ? " (" . number_format($pLog->pieces_rejected) . " pcs rejected)" : "";
+                                    $timelineEvents->push((object)[
+                                        'label' => "Manufacturer Completed: {$prodPieces} pcs of {$prodItemName}{$rejInfo}",
+                                        'date' => $pLog->created_at,
+                                        'color' => 'bg-teal-500',
+                                        'badge' => 'Production'
+                                    ]);
+                                }
+                            } elseif ($order->items->sum('manufactured_pieces') > 0 && !$order->mfg_completed_at && !$order->completed_at) {
+                                // Fallback for legacy orders manufactured prior to logging table
+                                $totalMfgPieces = number_format($order->items->sum('manufactured_pieces'));
+                                $timelineEvents->push((object)[
+                                    'label' => "Manufacturer Production In-Progress: {$totalMfgPieces} pcs manufactured",
+                                    'date' => $order->updated_at ?? ($order->allocated_at ? $order->allocated_at->copy()->addHour() : now()),
+                                    'color' => 'bg-teal-500',
+                                    'badge' => 'Production'
+                                ]);
+                            }
+
+                            // 7. Manufacturer Finished All Production (Last Completed Manufacturer Side)
+                            $mfgCompletedDate = $order->mfg_completed_at ?? ($order->manufacturing_status === 'completed' && $order->completed_at ? $order->completed_at : null);
+                            if ($mfgCompletedDate) {
+                                $totalOrderPieces = number_format($order->items->sum('total_pieces') ?: $order->items->sum('manufactured_pieces'));
+                                $timelineEvents->push((object)[
+                                    'label' => "Manufacturer Finished All Production ({$totalOrderPieces} total pcs completed)",
+                                    'date' => $mfgCompletedDate,
+                                    'color' => 'bg-emerald-600',
+                                    'badge' => 'Mfg Complete'
+                                ]);
+                            }
+
+                            // 8. Admin Dispatched Batches (Partial Dispatches & Invoices)
+                            if ($order->invoices && $order->invoices->count() > 0) {
+                                foreach ($order->invoices as $invIndex => $invoice) {
+                                    $invQty = number_format($invoice->items->sum('quantity'));
+                                    $invPieces = $invoice->items->sum('pieces');
+                                    $pieceStr = $invPieces > 0 ? " / " . number_format($invPieces) . " pcs" : "";
+                                    $batchNum = $invIndex + 1;
+                                    $timelineEvents->push((object)[
+                                        'label' => "Admin Dispatched Batch {$batchNum} ({$invQty} units{$pieceStr}) - Invoice #{$invoice->invoice_number}",
+                                        'date' => $invoice->dispatched_at ?? $invoice->created_at,
+                                        'color' => 'bg-blue-500',
+                                        'badge' => 'Dispatch Batch'
+                                    ]);
+                                }
+                            }
+
+                            // 9. Admin Final Dispatch Completed
+                            if ($order->dispatched_at) {
+                                $timelineEvents->push((object)[
+                                    'label' => 'Admin Completed Final Dispatch (100% Fully Dispatched to Customer)',
+                                    'date' => $order->dispatched_at,
+                                    'color' => 'bg-blue-800',
+                                    'badge' => 'Fully Dispatched'
+                                ]);
+                            }
+
+                            $timelineEvents = $timelineEvents->sortBy('date')->values();
+                            @endphp
+
+                            <ul class="space-y-4 text-xs border-l-2 border-slate-200 pl-6 ml-2">
+                                @foreach($timelineEvents as $event)
+                                <li class="relative pl-2 leading-relaxed">
+                                    <span class="absolute -left-[31px] top-1.5 w-3.5 h-3.5 {{ $event->color }} rounded-full ring-4 ring-slate-50"></span>
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="font-black text-slate-800 break-words">{{ $event->label }}</span>
+                                            @if(!empty($event->badge))
+                                            <span class="px-1.5 py-0.5 text-[9px] font-black rounded uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                                {{ $event->badge }}
+                                            </span>
+                                            @endif
+                                        </div>
+                                        <div class="text-[11px] font-semibold text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                            <svg class="w-3 h-3 text-slate-400 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <span>{{ $event->date ? $event->date->timezone('Asia/Kolkata')->format('d M, Y • h:i A') . ' IST' : 'N/A' }}</span>
+                                        </div>
+                                    </div>
+                                </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+
+                        {{-- 1. ORDER ACTION REQUIRED (PENDING STATE) --}}
+                        @if($order->status === 'pending')
+                        <div class="space-y-4">
+                            <h6 class="text-xs font-black text-slate-700 uppercase mb-4 tracking-widest text-center">New Order Action Required</h6>
+                            <div class="grid grid-cols-2 gap-4">
+                                <form action="{{ route('admin.orders.update', $order) }}" method="POST">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="status" value="accepted">
+                                    <button type="submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                                        ✅ Accept
+                                    </button>
+                                </form>
+                                <form action="{{ route('admin.orders.update', $order) }}" method="POST">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="status" value="rejected">
+                                    <button type="submit" class="w-full py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                                        ❌ Reject
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        {{-- 2. ACCEPTED BADGE --}}
+                        @elseif($order->status === 'accepted')
+                        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+                            <p class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Order Accepted</p>
+                            <span class="text-[11px] text-emerald-600 font-medium">
+                                {{ $order->accepted_at ? $order->accepted_at->timezone('Asia/Kolkata')->format('d M, Y h:i A') : 'N/A' }}
+                            </span>
+                        </div>
+
+                        {{-- 3. REJECTED BADGE --}}
+                        @elseif($order->status === 'rejected')
+                        <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-center">
+                            <p class="text-xs font-bold text-rose-700 uppercase tracking-wider">Order Rejected</p>
+                            <span class="text-[11px] text-rose-600 font-medium">
+                                {{ $order->rejected_at ? $order->rejected_at->timezone('Asia/Kolkata')->format('d M, Y h:i A') : 'N/A' }}
+                            </span>
+                        </div>
+                        @endif
+
+
+                        {{-- 4. ALLOCATE / REALLOCATE SECTION (Independent condition) --}}
+                        {{-- Visible when the order is NOT rejected/cancelled/pending, and either unallocated or currently in allocated status --}}
+                        @if(!in_array($order->status, ['rejected', 'cancelled', 'pending']) && (!$order->manufacturing_team_id || $order->manufacturing_status === 'allocated'))
+                        <form action="{{ route('admin.orders.allocate') }}" method="POST" class="space-y-4 pt-4 border-t border-slate-100">
+                            @csrf
+                            <input type="hidden" name="order_ids[]" value="{{ $order->id }}">
+                            <div>
+                                <label class="text-xs font-black text-slate-700 uppercase mb-2 block">
+                                    {{ $order->manufacturingTeam ? 'Reallocate Partner' : 'Select Partner' }}
+                                </label>
+                                <select name="manufacturing_team_id" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 font-bold text-sm bg-slate-50" required>
+                                    <option value="">Select a team</option>
+                                    @foreach($manufacturingTeams as $team)
+                                    <option value="{{ $team->id }}" {{ ($order->manufacturing_team_id == $team->id) ? 'selected' : '' }}>
+                                        {{ $team->factory_name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                                @if($order->manufacturingTeam)
+                                <p class="text-[9px] text-amber-600 font-bold mt-2 uppercase tracking-widest">
+                                    <i class="fas fa-info-circle mr-1"></i> Editable until accepted
+                                </p>
+                                @endif
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                                {{ $order->manufacturingTeam ? 'Reallocate' : 'Allocate' }}
+                            </button>
+                        </form>
+                        @endif
+
+
+                        {{-- 5. INVOICES & REJECTED ITEMS --}}
+                        <div class="pt-6 border-t border-slate-100">
+                            @include('components.rejected-items-invoice', ['order' => $order])
+                            <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 italic">Generated Invoices</h6>
+                            @if($order->invoices->count() > 0)
+                            <div class="space-y-3">
+                                @foreach($order->invoices as $invoice)
+                                <a href="{{ route('admin.orders.invoice', ['order' => $order->id, 'invoice' => $invoice->id]) }}" class="flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-100 transition-all group">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 flex items-center justify-center bg-indigo-200 text-indigo-700 rounded-lg mr-3">
+                                            <i class="fas fa-file-invoice text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <span class="text-[10px] font-black text-indigo-900 block">{{ $invoice->invoice_number }}</span>
+                                            <span class="text-[9px] font-bold text-indigo-500 block">{{ $invoice->created_at->timezone('Asia/Kolkata')->format('M d, Y') }}</span>
+                                        </div>
+                                    </div>
+                                </a>
+                                @endforeach
                             </div>
                             @else
-                            <div class="p-6 bg-white rounded-2xl border border-dashed border-slate-300 text-center italic text-slate-400 text-sm">
-                                Not currently assigned to any unit.
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center italic text-slate-400 text-xs">
+                                No invoices generated.
                             </div>
                             @endif
-
-                            <div class="pt-2">
-                                <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                                    Chronology Timeline
-                                </h6>
-                                
-                                @php
-                                    $timelineEvents = collect();
-                                    
-                                    if ($order->created_at) {
-                                        $timelineEvents->push((object)[
-                                            'label' => 'Order Placed by Customer',
-                                            'date' => $order->created_at,
-                                            'color' => 'bg-slate-400'
-                                        ]);
-                                    }
-                                    
-                                    if ($order->status != 'pending') {
-                                        // We use created_at as an approximation since there's no accepted_at column
-                                        $timelineEvents->push((object)[
-                                            'label' => 'Admin Accepted Order',
-                                            'date' => $order->created_at->copy()->addMinute(), 
-                                            'color' => 'bg-emerald-500'
-                                        ]);
-                                    }
-                                    
-                                    if ($order->allocated_at) {
-                                        $factoryName = $order->manufacturingTeam ? $order->manufacturingTeam->factory_name : 'Unit';
-                                        $timelineEvents->push((object)[
-                                            'label' => 'Admin Allocated to ' . $factoryName,
-                                            'date' => $order->allocated_at,
-                                            'color' => 'bg-indigo-500'
-                                        ]);
-                                    }
-                                    
-                                    if ($order->manufacturing_status == 'processing' && $order->allocated_at) {
-                                        $timelineEvents->push((object)[
-                                            'label' => 'Manufacturer Started Production',
-                                            'date' => $order->allocated_at->copy()->addSecond(),
-                                            'color' => 'bg-amber-500'
-                                        ]);
-                                    }
-                                    
-                                    if ($order->invoices) {
-                                        foreach ($order->invoices as $index => $invoice) {
-                                            $totalQty = $invoice->items->sum('quantity');
-                                            $timelineEvents->push((object)[
-                                                'label' => 'Admin Dispatched Batch ' . ($index + 1) . ' (' . number_format($totalQty) . ' items)',
-                                                'date' => $invoice->created_at,
-                                                'color' => 'bg-blue-400'
-                                            ]);
-                                        }
-                                    }
-                                    
-                                    if ($order->completed_at) {
-                                        $timelineEvents->push((object)[
-                                            'label' => 'Manufacturer Finished All Production',
-                                            'date' => $order->completed_at,
-                                            'color' => 'bg-green-600'
-                                        ]);
-                                    }
-                                    
-                                    if ($order->dispatched_at) {
-                                        $timelineEvents->push((object)[
-                                            'label' => 'Admin Completed Final Dispatch',
-                                            'date' => $order->dispatched_at,
-                                            'color' => 'bg-blue-600'
-                                        ]);
-                                    }
-                                    
-                                    $timelineEvents = $timelineEvents->sortBy('date')->values();
-                                @endphp
-                                
-                                <ul class="space-y-4 text-xs font-bold border-l-2 border-slate-200 pl-6 ml-2">
-                                    @foreach($timelineEvents as $event)
-                                    <li class="relative pl-2 leading-relaxed">
-                                        <span class="absolute -left-[31px] top-1 w-3 h-3 {{ $event->color }} rounded-full ring-4 ring-slate-50"></span>
-                                        <span class="text-slate-700 break-words">{{ $event->label }}: {{ $event->date->timezone('Asia/Kolkata')->format('M d, Y h:i A') }}</span>
-                                    </li>
-                                    @endforeach
-                                </ul>
-                            </div>
                         </div>
 
-                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                            @if($order->status === 'pending')
-                            <div class="space-y-4">
-                                <h6 class="text-xs font-black text-slate-700 uppercase mb-4 tracking-widest text-center">New Order Action Required</h6>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <form action="{{ route('admin.orders.update', $order) }}" method="POST">
-                                        @csrf @method('PUT')
-                                        <input type="hidden" name="status" value="accepted">
-                                        <button type="submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
-                                            ✅ Accept
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('admin.orders.update', $order) }}" method="POST">
-                                        @csrf @method('PUT')
-                                        <input type="hidden" name="status" value="rejected">
-                                        <button type="submit" class="w-full py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
-                                            ❌ Reject
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                            @elseif(!$order->manufacturingTeam || $order->manufacturing_status === 'allocated')
-                            <form action="{{ route('admin.orders.allocate') }}" method="POST" class="space-y-4">
-                                @csrf
-                                <input type="hidden" name="order_ids[]" value="{{ $order->id }}">
-                                <div>
-                                    <label class="text-xs font-black text-slate-700 uppercase mb-2 block">
-                                        {{ $order->manufacturingTeam ? 'Reallocate Partner' : 'Select Partner' }}
-                                    </label>
-                                    <select name="manufacturing_team_id" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 font-bold text-sm bg-slate-50" required>
-                                        <option value="">Select a team</option>
-                                        @foreach($manufacturingTeams as $team)
-                                        <option value="{{ $team->id }}" {{ ($order->manufacturing_team_id == $team->id) ? 'selected' : '' }}>{{ $team->factory_name }}</option>
-                                        @endforeach
-                                    </select>
-                                    @if($order->manufacturingTeam)
-                                    <p class="text-[9px] text-amber-600 font-bold mt-2 uppercase tracking-widest">
-                                        <i class="fas fa-info-circle mr-1"></i> Editable until accepted
-                                    </p>
-                                    @endif
-                                </div>
-                                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
-                                    {{ $order->manufacturingTeam ? 'Reallocate' : 'Allocate' }}
-                                </button>
-                            </form>
-                            @endif
+                    </div>
+                </div>
 
-                            <div class="mt-6 pt-6 border-t border-slate-100">
-                                @include('components.rejected-items-invoice', ['order' => $order])
-                                <h6 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 italic">Generated Invoices</h6>
-                                @if($order->invoices->count() > 0)
-                                <div class="space-y-3">
-                                    @foreach($order->invoices as $invoice)
-                                    <a href="{{ route('admin.orders.invoice', ['order' => $order->id, 'invoice' => $invoice->id]) }}" class="flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-100 transition-all group">
-                                        <div class="flex items-center">
-                                            <div class="w-8 h-8 flex items-center justify-center bg-indigo-200 text-indigo-700 rounded-lg mr-3">
-                                                <i class="fas fa-file-invoice text-xs"></i>
-                                            </div>
-                                            <div>
-                                                <span class="text-[10px] font-black text-indigo-900 block">{{ $invoice->invoice_number }}</span>
-                                                <span class="text-[9px] font-bold text-indigo-500 block">{{ $invoice->created_at->timezone('Asia/Kolkata')->format('M d, Y') }}</span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                    @endforeach
-                                </div>
-                                @else
-                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center italic text-slate-400 text-xs">
-                                    No invoices generated.
-                                </div>
-                                @endif
-                            </div>
+                <!-- Right Column: Dispatch Operations -->
+                <div class="bg-indigo-50/30 p-6 lg:p-8 rounded-3xl border border-indigo-50 space-y-6">
+                    <div class="flex items-center gap-3 pb-4 border-b border-indigo-100">
+                        <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-indigo-100 flex items-center justify-center text-indigo-600">
+                            <i class="fas fa-truck-fast"></i>
                         </div>
+                        <h6 class="text-sm font-black text-indigo-900 uppercase tracking-widest">Dispatch Operations</h6>
                     </div>
 
-                    <!-- Right Column: Dispatch Operations -->
-                    <div class="bg-indigo-50/30 p-6 lg:p-8 rounded-3xl border border-indigo-50 space-y-6">
-                        <div class="flex items-center gap-3 pb-4 border-b border-indigo-100">
-                            <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-indigo-100 flex items-center justify-center text-indigo-600">
-                                <i class="fas fa-truck-fast"></i>
-                            </div>
-                            <h6 class="text-sm font-black text-indigo-900 uppercase tracking-widest">Dispatch Operations</h6>
-                        </div>
-
-                        @if($order->has_pending_items)
-                        <div class="space-y-6">
-                            <div class="p-4 bg-white rounded-2xl border border-indigo-100 shadow-sm">
-                                <p class="text-sm font-black text-indigo-700">
-                                    @if($order->manufacturing_status == 'processing')
-                                    <i class="fas fa-cogs mr-2"></i> Work In Progress
-                                    @else
-                                    <i class="fas fa-exclamation-triangle mr-2"></i> Pending Release
-                                    @endif
-                                </p>
-                                <div class="flex items-center gap-3 mt-3">
-                                    <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg uppercase tracking-widest border border-indigo-100 shadow-sm">
-                                        Pieces waiting to ship: {{ $order->items->sum(function($i){ return $i->dispatch_pending_quantity * $i->per_unit_pieces; }) }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <form action="{{ route('admin.orders.partial-dispatch', $order) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-                                @csrf @method('PUT')
-
-                                @php
-                                    $hasDispatchableItems = $order->items->sum('dispatch_pending_quantity') > 0;
-                                @endphp
-                                
-                                @if($hasDispatchableItems)
-                                    <div class="space-y-3 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-                                        @foreach($order->items as $item)
-                                        @if($item->dispatch_pending_quantity > 0)
-                                        <div class="bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between p-3 relative overflow-hidden group hover:border-indigo-200 hover:bg-white transition-all shadow-sm">
-                                            <div class="absolute left-0 top-0 w-1 h-full bg-indigo-500 group-hover:bg-indigo-600"></div>
-                                            
-                                            <div class="pl-3 flex-1 overflow-hidden pr-3">
-                                                <div class="text-xs font-black text-slate-800 truncate" title="{{ $item->product_name }}">{{ $item->product_name }}</div>
-                                                <div class="flex items-center gap-2 mt-1">
-                                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ord: {{ $item->total_pieces }}</span>
-                                                    <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 shadow-sm">Ready: {{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="w-24 shrink-0 flex flex-col items-center">
-                                                <input type="number" name="dispatched_pieces[{{ $item->id }}]" class="w-full px-2 py-1.5 rounded-lg border-slate-200 text-sm font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 text-center shadow-inner" min="0" max="{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}" value="{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}" required>
-                                            </div>
-                                        </div>
-                                        @endif
-                                        @endforeach
-                                    </div>
+                    @if($order->has_pending_items)
+                    <div class="space-y-6">
+                        <div class="p-4 bg-white rounded-2xl border border-indigo-100 shadow-sm">
+                            <p class="text-sm font-black text-indigo-700">
+                                @if($order->manufacturing_status == 'processing')
+                                <i class="fas fa-cogs mr-2"></i> Work In Progress
                                 @else
-                                    <div class="p-10 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
-                                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-slate-300 shadow-sm">
-                                            <i class="fas fa-industry text-2xl"></i>
-                                        </div>
-                                        <h6 class="text-sm font-black text-slate-600 uppercase tracking-widest">Awaiting Production</h6>
-                                        <p class="text-xs text-slate-400 font-bold max-w-sm mx-auto leading-relaxed">No items are currently manufactured and ready to be dispatched. Please wait for the manufacturing team to process this order.</p>
-                                    </div>
+                                <i class="fas fa-exclamation-triangle mr-2"></i> Pending Release
                                 @endif
-                                
-                                <!-- Batch Level Proof -->
-                                <div class="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100 space-y-4">
-                                    <h6 class="text-[10px] font-black text-indigo-700 uppercase tracking-widest italic mb-2">Batch Shipment Proof (Shared)</h6>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Upload Dispatch Photo</label>
-                                            <input type="file" name="order_dispatch_image" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-indigo-100 file:text-indigo-700 cursor-pointer">
-                                        </div>
-                                        <div>
-                                            <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Logistics Note (LR Number, Driver, etc.)</label>
-                                            <input type="text" name="order_dispatch_description" class="w-full px-4 py-2 rounded-xl border-slate-200 text-sm italic" placeholder="Enter tracking or batch details...">
+                            </p>
+                            <div class="flex items-center gap-3 mt-3">
+                                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg uppercase tracking-widest border border-indigo-100 shadow-sm">
+                                    Pieces waiting to ship: {{ $order->items->sum(function($i){ return $i->dispatch_pending_quantity * $i->per_unit_pieces; }) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <form action="{{ route('admin.orders.partial-dispatch', $order) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                            @csrf @method('PUT')
+
+                            @php
+                            $hasDispatchableItems = $order->items->sum('dispatch_pending_quantity') > 0;
+                            @endphp
+
+                            @if($hasDispatchableItems)
+                            <div class="space-y-3 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                                @foreach($order->items as $item)
+                                @if($item->dispatch_pending_quantity > 0)
+                                <div class="bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between p-3 relative overflow-hidden group hover:border-indigo-200 hover:bg-white transition-all shadow-sm">
+                                    <div class="absolute left-0 top-0 w-1 h-full bg-indigo-500 group-hover:bg-indigo-600"></div>
+
+                                    <div class="pl-3 flex-1 overflow-hidden pr-3">
+                                        <div class="text-xs font-black text-slate-800 truncate" title="{{ $item->product_name }}">{{ $item->product_name }}</div>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ord: {{ $item->total_pieces }}</span>
+                                            <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 shadow-sm">Ready: {{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}</span>
                                         </div>
                                     </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                        <div>
-                                            <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Logistics Fee (₹)</label>
-                                            <input type="number" name="shipping_fee" step="0.01" class="w-full px-4 py-2 rounded-xl border-slate-200 text-sm font-bold" value="0.00">
-                                        </div>
-                                        <div>
-                                            <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Other Charges / Dear (₹)</label>
-                                            <input type="number" name="other_charges" step="0.01" class="w-full px-4 py-2 rounded-xl border-slate-200 text-sm font-bold" value="0.00">
-                                        </div>
+
+                                    <div class="w-24 shrink-0 flex flex-col items-center">
+                                        <input type="number" name="dispatched_pieces[{{ $item->id }}]" class="w-full px-2 py-1.5 rounded-lg border-slate-200 text-sm font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 text-center shadow-inner" min="0" max="{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}" value="{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }}" required>
                                     </div>
                                 </div>
-                                <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-100 italic">Dispatch Batch</button>
-                            </form>
-                        </div>
-                        @elseif($order->manufacturing_status == 'completed' && !$order->dispatched_at)
-                        <div class="mt-8 p-6 bg-green-50 rounded-3xl border border-green-100">
-                            <h6 class="text-xs font-black text-green-700 uppercase tracking-widest mb-4 italic">Final Logistics Clearance</h6>
-                            <form action="{{ route('admin.orders.dispatch', $order) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-                                @csrf
-                                <input type="file" name="dispatch_image" class="w-full text-xs text-slate-500 file:bg-green-100 file:text-green-700 file:rounded-full file:border-0 file:px-4 file:py-2 file:font-bold">
-                                <textarea name="dispatch_description" rows="2" class="w-full p-4 rounded-2xl border-slate-200 text-xs italic outline-none focus:border-green-500" placeholder="Final handover notes..."></textarea>
+                                @endif
+                                @endforeach
+                            </div>
+                            @else
+                            <div class="p-10 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
+                                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-slate-300 shadow-sm">
+                                    <i class="fas fa-industry text-2xl"></i>
+                                </div>
+                                <h6 class="text-sm font-black text-slate-600 uppercase tracking-widest">Awaiting Production</h6>
+                                <p class="text-xs text-slate-400 font-bold max-w-sm mx-auto leading-relaxed">No items are currently manufactured and ready to be dispatched. Please wait for the manufacturing team to process this order.</p>
+                            </div>
+                            @endif
+
+                            <!-- Batch Level Proof -->
+                            <div class="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100 space-y-4">
+                                <h6 class="text-[10px] font-black text-indigo-700 uppercase tracking-widest italic mb-2">Batch Shipment Proof (Shared)</h6>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Logistics Fee (₹)</label>
-                                        <input type="number" name="shipping_fee" step="0.01" class="w-full px-4 py-3 rounded-2xl border-slate-200 text-sm font-black bg-slate-50" value="0.00">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Upload Dispatch Photo</label>
+                                        <input type="file" name="order_dispatch_image" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-indigo-100 file:text-indigo-700 cursor-pointer">
                                     </div>
                                     <div>
-                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Other Charges / Dear (₹)</label>
-                                        <input type="number" name="other_charges" step="0.01" class="w-full px-4 py-3 rounded-2xl border-slate-200 text-sm font-black bg-slate-50" value="0.00">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Logistics Note (LR Number, Driver, etc.)</label>
+                                        <input type="text" name="order_dispatch_description" class="w-full px-4 py-2 rounded-xl border-slate-200 text-sm italic" placeholder="Enter tracking or batch details...">
                                     </div>
                                 </div>
-                                <button type="submit" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-green-100" onclick="return confirm('Seal and finalize logistics?')">Final Order Release</button>
-                            </form>
-                        </div>
-                        @endif
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Logistics Fee (₹)</label>
+                                        <input type="number" name="shipping_fee" step="0.01" class="w-full px-4 py-2 rounded-xl border-slate-200 text-sm font-bold" value="0.00">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Other Charges / Dear (₹)</label>
+                                        <input type="number" name="other_charges" step="0.01" class="w-full px-4 py-2 rounded-xl border-slate-200 text-sm font-bold" value="0.00">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-100 italic">Dispatch Batch</button>
+                        </form>
                     </div>
+                    @elseif($order->manufacturing_status == 'completed' && !$order->dispatched_at)
+                    <div class="mt-8 p-6 bg-green-50 rounded-3xl border border-green-100">
+                        <h6 class="text-xs font-black text-green-700 uppercase tracking-widest mb-4 italic">Final Logistics Clearance</h6>
+                        <form action="{{ route('admin.orders.dispatch', $order) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                            @csrf
+                            <input type="file" name="dispatch_image" class="w-full text-xs text-slate-500 file:bg-green-100 file:text-green-700 file:rounded-full file:border-0 file:px-4 file:py-2 file:font-bold">
+                            <textarea name="dispatch_description" rows="2" class="w-full p-4 rounded-2xl border-slate-200 text-xs italic outline-none focus:border-green-500" placeholder="Final handover notes..."></textarea>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Logistics Fee (₹)</label>
+                                    <input type="number" name="shipping_fee" step="0.01" class="w-full px-4 py-3 rounded-2xl border-slate-200 text-sm font-black bg-slate-50" value="0.00">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Other Charges / Dear (₹)</label>
+                                    <input type="number" name="other_charges" step="0.01" class="w-full px-4 py-3 rounded-2xl border-slate-200 text-sm font-black bg-slate-50" value="0.00">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-green-100" onclick="return confirm('Seal and finalize logistics?')">Final Order Release</button>
+                        </form>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <style>

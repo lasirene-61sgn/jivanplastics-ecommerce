@@ -146,11 +146,15 @@ class B2BDashboardController extends Controller
                 });
             }
             if ($request->filled('color')) {
-                $query->where(function ($q) use ($request) {
-                    $q->where('color', $request->color)
-                        ->orWhere('color', 'like', $request->color . ',%')
-                        ->orWhere('color', 'like', '%,' . $request->color)
-                        ->orWhere('color', 'like', '%,' . $request->color . ',%');
+                $color = trim($request->color);
+
+                $query->where(function ($q) use ($color) {
+                    $q->where('color', $color)
+                        ->orWhere('color', 'like', $color . ',%')
+                        ->orWhere('color', 'like', '%, ' . $color . ',%')
+                        ->orWhere('color', 'like', '%,' . $color . ',%')
+                        ->orWhere('color', 'like', '%, ' . $color)
+                        ->orWhere('color', 'like', '%,' . $color);
                 });
             }
         }

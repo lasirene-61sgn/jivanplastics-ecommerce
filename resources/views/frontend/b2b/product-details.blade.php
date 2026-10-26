@@ -63,6 +63,9 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
             $productSizes = $product->size ? explode(',', $product->size) : [];
             $productThicknesses = $product->thickness ? explode(',', $product->thickness) : [];
             $productColors = $product->color ? explode(',', $product->color) : [];
+            $cart = session('cart', []);
+            $cartProductIds = collect($cart)->pluck('product_id')->map(fn($id) => (int)$id)->unique()->values()->toArray();
+            $isProductInCart = in_array((int)$product->id, $cartProductIds);
             @endphp
             <div class="p-8 lg:p-12 flex flex-col h-full bg-white" x-data="{ 
                 quantity: {{ $b2bMin }}, 
@@ -73,6 +76,8 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
                 selectedSize: '{{ trim($productSizes[0] ?? '') }}',
                 selectedThickness: '{{ trim($productThicknesses[0] ?? '') }}',
                 selectedColor: '{{ trim($productColors[0] ?? '') }}',
+                isInCart: {{ $isProductInCart ? 'true' : 'false' }},
+                isAdding: false,
                 get currentPieces() {
                     return parseInt(this.thicknessPieces[this.selectedThickness] || this.basePieces);
                 },
@@ -235,7 +240,56 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
                     </div>
 
                     <!-- Add to Cart Form -->
-                    <form action="{{ route('cart.add', $product->id) }}" method="POST">
+                    <form action="{{ route('cart.add', $product->id) }}" method="POST" @submit.prevent="
+                        if (!canAddToCart || isAdding) return;
+                        
+                        if (isInCart) {
+                            if (!confirm('This product is already in your cart. Do you want to add more to cart?')) {
+                                return;
+                            }
+                        }
+                        
+                        let form = $event.target;
+                        isAdding = true;
+                        
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: new FormData(form),
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            isAdding = false;
+                            if(data.success) {
+                                isInCart = true;
+                                
+                                // Update global cart counts if they exist
+                                let cartCountEls = document.querySelectorAll('.cart-count, .cart-counter, [data-cart-count]');
+                                cartCountEls.forEach(el => {
+                                    el.innerText = data.cart_count;
+                                    el.style.display = data.cart_count > 0 ? 'flex' : 'none';
+                                });
+                                
+                                window.dispatchEvent(new CustomEvent('cart-updated', { detail: data }));
+                                
+                                if(typeof notyf !== 'undefined') notyf.success(data.message);
+                                else if(typeof toastr !== 'undefined') toastr.success(data.message);
+                            } else {
+                                if(typeof notyf !== 'undefined') notyf.error(data.message || 'Error adding to cart');
+                                else if(typeof toastr !== 'undefined') toastr.error(data.message || 'Error adding to cart');
+                                else alert(data.message || 'Error adding to cart');
+                            }
+                        })
+                        .catch(error => {
+                            isAdding = false;
+                            if(typeof notyf !== 'undefined') notyf.error('Error adding to cart');
+                            else if(typeof toastr !== 'undefined') toastr.error('Error adding to cart');
+                            else alert('Error adding to cart');
+                        });
+                    ">
                         @csrf
                         <input type="hidden" name="quantity" :value="quantity">
                         <input type="hidden" name="size" :value="selectedSize">
@@ -243,13 +297,26 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
                         <input type="hidden" name="color" :value="selectedColor">
 
                         <button type="submit"
-                            :disabled="!canAddToCart"
-                            :class="!canAddToCart ? 'bg-slate-200 cursor-not-allowed text-slate-400' : 'bg-slate-900 text-white hover:bg-red-600 shadow-xl shadow-slate-200 hover:shadow-red-200'"
+                            :disabled="!canAddToCart || isAdding"
+                            :class="!canAddToCart ? 'bg-slate-200 cursor-not-allowed text-slate-400' : (isInCart ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-200' : 'bg-slate-900 text-white hover:bg-red-600 shadow-xl shadow-slate-200 hover:shadow-red-200')"
                             class="w-full flex items-center justify-center gap-3 py-5 rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                            </svg>
-                            <span x-text="canAddToCart ? 'Add To Cart' : 'Please Select Options' "></span>
+                            <template x-if="isAdding">
+                                <svg class="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </template>
+                            <template x-if="!isAdding && isInCart">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </template>
+                            <template x-if="!isAdding && !isInCart">
+                                <svg class="w-5 h-5 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                                </svg>
+                            </template>
+                            <span x-text="!canAddToCart ? 'Please Select Options' : (isAdding ? (isInCart ? 'Adding More...' : 'Adding...') : (isInCart ? 'Already in Cart ✓' : 'Add To Cart'))"></span>
                         </button>
                     </form>
                 </div>

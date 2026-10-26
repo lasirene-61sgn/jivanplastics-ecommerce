@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManufacturingTeam;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderProductionLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -129,14 +130,16 @@ class DashboardController extends Controller
                 if (!$request->tentative_dispatch_date && !$order->tentative_dispatch_date) {
                     return redirect()->back()->with('error', 'Tentative dispatch date is required when accepting an order.');
                 }
-                $updateData['allocated_at'] = $updateData['allocated_at'] ?? now();
+                $updateData['mfg_accepted_at'] = $order->mfg_accepted_at ?? now();
+                $updateData['allocated_at'] = $order->allocated_at ?? now();
                 $updateData['status'] = 'under_process';
                 if ($request->has('tentative_dispatch_date')) {
                     $updateData['tentative_dispatch_date'] = $request->tentative_dispatch_date;
                 }
                 break;
             case 'completed':
-                $updateData['completed_at'] = now();
+                $updateData['mfg_completed_at'] = now();
+                $updateData['completed_at'] = $order->completed_at ?? now();
                 break;
             case 'rejected':
                 $updateData['manufacturing_team_id'] = null;
@@ -184,7 +187,7 @@ class DashboardController extends Controller
             'rejection_reasons.*' => 'nullable|string',
         ]);
         
-        return DB::transaction(function () use ($request, $order) {
+        return DB::transaction(function () use ($request, $order, $manufacturingTeam) {
             $totalCompletedPieces = 0;
             $totalRejectedPieces = 0;
             
@@ -228,6 +231,18 @@ class DashboardController extends Controller
                             'rejection_reason' => $rejectionReason ? ($orderItem->rejection_reason ? $orderItem->rejection_reason . '; ' . $rejectionReason : $rejectionReason) : $orderItem->rejection_reason,
                         ]);
                         
+                        // Record production log for chronology timeline
+                        OrderProductionLog::create([
+                            'order_id' => $order->id,
+                            'order_item_id' => $orderItem->id,
+                            'manufacturing_team_id' => $manufacturingTeam ? $manufacturingTeam->id : $order->manufacturing_team_id,
+                            'pieces_completed' => $actualCompletedPieces,
+                            'pieces_rejected' => $actualRejectedPieces,
+                            'quantity_completed' => $orderItem->per_unit_pieces > 0 ? ($actualCompletedPieces / $orderItem->per_unit_pieces) : $actualCompletedPieces,
+                            'quantity_rejected' => $orderItem->per_unit_pieces > 0 ? ($actualRejectedPieces / $orderItem->per_unit_pieces) : $actualRejectedPieces,
+                            'rejection_reason' => $rejectionReason,
+                        ]);
+
                         $totalCompletedPieces += $actualCompletedPieces;
                         $totalRejectedPieces += $actualRejectedPieces;
                     }
@@ -244,7 +259,8 @@ class DashboardController extends Controller
             if ($stillPendingPieces <= 0) {
                 $order->update([
                     'manufacturing_status' => 'completed',
-                    'completed_at' => now(),
+                    'mfg_completed_at' => now(),
+                    'completed_at' => $order->completed_at ?? now(),
                 ]);
                 
                 // Notify admin
@@ -290,6 +306,7 @@ class DashboardController extends Controller
         foreach ($orders as $order) {
             $order->update([
                 'manufacturing_status' => 'processing',
+                'mfg_accepted_at' => $order->mfg_accepted_at ?? now(),
                 'allocated_at' => $order->allocated_at ?? now(),
                 'status' => 'under_process',
                 'tentative_dispatch_date' => $request->tentative_dispatch_date,
@@ -326,6 +343,7 @@ class DashboardController extends Controller
             // Set timestamps based on status
             switch ($request->manufacturing_status) {
                 case 'processing':
+                    $updateData['mfg_accepted_at'] = $order->mfg_accepted_at ?? now();
                     $updateData['allocated_at'] = $order->allocated_at ?? now();
                     $updateData['status'] = 'under_process';
                     break;
@@ -338,7 +356,8 @@ class DashboardController extends Controller
                     if ($pendingQuantity > 0) {
                         continue 2; // Skip this order update
                     }
-                    $updateData['completed_at'] = now();
+                    $updateData['mfg_completed_at'] = now();
+                    $updateData['completed_at'] = $order->completed_at ?? now();
                     break;
                 case 'rejected':
                     $updateData['manufacturing_team_id'] = null;

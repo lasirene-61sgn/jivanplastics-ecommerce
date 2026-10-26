@@ -175,14 +175,17 @@
         .dropdown-submenu::-webkit-scrollbar {
             width: 6px;
         }
+
         .dropdown-submenu::-webkit-scrollbar-track {
             background: transparent;
             border-radius: 10px;
         }
+
         .dropdown-submenu::-webkit-scrollbar-thumb {
             background: rgba(227, 30, 36, 0.3);
             border-radius: 10px;
         }
+
         .dropdown-submenu::-webkit-scrollbar-thumb:hover {
             background: rgba(227, 30, 36, 0.6);
         }
@@ -267,7 +270,7 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path d="M4 6h16M4 12h16M4 18h16"></path>
                                 </svg>
-                                Products
+                                Place Orders
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path d="M19 9l-7 7-7-7"></path>
                                 </svg>
@@ -328,12 +331,26 @@
                     </div>
                     @endif
 
-                    <a href="{{ route('cart.index') }}" class="relative p-2 text-slate-600 hover:text-red-600 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                        </svg>
-                        @php $cartCount = count((array)session('cart', [])); @endphp
-                        <span class="cart-count absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white" style="display: {{ $cartCount > 0 ? 'flex' : 'none' }};">{{ $cartCount }}</span>
+                    @php
+                    $cartCount = count((array) session('cart', []));
+                    @endphp
+
+                    <a href="{{ route('cart.index') }}" class="group flex items-center gap-2 p-2 text-slate-700 hover:text-red-600 transition-colors">
+                        <div class="relative flex items-center justify-center">
+                            <!-- Cart Icon (Increased to 28px / w-7 h-7) -->
+                            <svg class="w-7 h-7 text-current transition-transform duration-200 group-hover:scale-105" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+
+                            <!-- Cart Badge Counter -->
+                            <span class="cart-count absolute -top-1.5 -right-2 min-w-4 h-4 px-1 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                                style="display: {{ $cartCount > 0 ? 'flex' : 'none' }};">
+                                {{ $cartCount }}
+                            </span>
+                        </div>
+
+                        <!-- Cart Label -->
+                        <span class="text-sm font-bold tracking-tight text-current">Cart</span>
                     </a>
 
                     <div class="relative has-dropdown">
@@ -416,7 +433,7 @@
 
             <div class="space-y-2" style="max-height: 80vh; overflow-y: auto;">
                 <a href="{{ route('b2b.dashboard') }}" class="dropdown-item font-bold py-4">Dashboard</a>
-                
+
                 <div x-data="{ expanded: false }" class="w-full">
                     <button @click="expanded = !expanded" class="dropdown-item font-bold py-4 w-full flex justify-between items-center text-left">
                         Products
@@ -424,29 +441,29 @@
                             <path d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
-                    
+
                     <div x-show="expanded" style="display: none;" class="pl-4 pr-2 space-y-1 pb-2">
                         <a href="{{ route('b2b.products') }}" class="dropdown-item py-2 text-sm font-bold text-red-600 italic">View All Products</a>
                         @foreach($navCategories as $category)
-                            <div x-data="{ subExpanded: false }" class="w-full">
-                                <button @click="subExpanded = !subExpanded" class="dropdown-item py-2 w-full flex justify-between items-center text-left text-sm font-medium">
-                                    {{ $category->name }}
-                                    @if($category->subcategories->count() > 0)
-                                    <svg class="w-4 h-4 transition-transform duration-200" :class="subExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                    @endif
-                                </button>
-                                
+                        <div x-data="{ subExpanded: false }" class="w-full">
+                            <button @click="subExpanded = !subExpanded" class="dropdown-item py-2 w-full flex justify-between items-center text-left text-sm font-medium">
+                                {{ $category->name }}
                                 @if($category->subcategories->count() > 0)
-                                <div x-show="subExpanded" style="display: none;" class="pl-4 space-y-1 bg-slate-50 rounded-lg py-1 mt-1">
-                                    <a href="{{ route('b2b.products', ['category' => $category->id]) }}" class="dropdown-item py-1.5 text-xs font-semibold italic text-slate-600">All {{ $category->name }}</a>
-                                    @foreach($category->subcategories as $sub)
-                                        <a href="{{ route('b2b.products', ['category' => $category->id, 'subcategory' => $sub->id]) }}" class="dropdown-item py-1.5 text-xs text-slate-500">{{ $sub->name }}</a>
-                                    @endforeach
-                                </div>
+                                <svg class="w-4 h-4 transition-transform duration-200" :class="subExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19 9l-7 7-7-7"></path>
+                                </svg>
                                 @endif
+                            </button>
+
+                            @if($category->subcategories->count() > 0)
+                            <div x-show="subExpanded" style="display: none;" class="pl-4 space-y-1 bg-slate-50 rounded-lg py-1 mt-1">
+                                <a href="{{ route('b2b.products', ['category' => $category->id]) }}" class="dropdown-item py-1.5 text-xs font-semibold italic text-slate-600">All {{ $category->name }}</a>
+                                @foreach($category->subcategories as $sub)
+                                <a href="{{ route('b2b.products', ['category' => $category->id, 'subcategory' => $sub->id]) }}" class="dropdown-item py-1.5 text-xs text-slate-500">{{ $sub->name }}</a>
+                                @endforeach
                             </div>
+                            @endif
+                        </div>
                         @endforeach
                     </div>
                 </div>

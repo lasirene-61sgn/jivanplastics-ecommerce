@@ -137,4 +137,9 @@ class OrderItem extends Model
     {
         return $this->hasMany(ReturnRequest::class, 'order_item_id');
     }
+
+    public function productionLogs()
+    {
+        return $this->hasMany(OrderProductionLog::class, 'order_item_id');
+    }
 }

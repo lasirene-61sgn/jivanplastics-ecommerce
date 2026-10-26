@@ -512,7 +512,7 @@ class DashboardController extends Controller
         session()->forget('sales_team_portal_cart');
         session()->forget('selected_dealer_id');
         
-        return redirect()->route('sales-team.dealer-support')->with('success', 'Order placed successfully for ' . $dealer->company_name . '! Order number: ' . $order->order_number);
+        return redirect()->route('sales-team.enhanced-dealer-support')->with('success', 'Order placed successfully for ' . $dealer->company_name . '! Order number: ' . $order->order_number);
     }
     
     /**
