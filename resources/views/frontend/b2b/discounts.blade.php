@@ -33,24 +33,25 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach($products as $product)
                 @php
-                    $originalPrice = $product->price;
-                    $discountedPrice = $product->getB2BDiscountedPrice($customer);
-                    $discountAmount = $originalPrice - $discountedPrice;
-                    $discountPercentage = $originalPrice > 0 ? round(($discountAmount / $originalPrice) * 100, 1) : 0;
+                    $firstVariation = $product->variations->first();
+                    $discountedPrice = $firstVariation 
+                        ? $firstVariation->getB2BDiscountedPrice($customer) 
+                        : $product->getB2BDiscountedPrice($customer);
+                    $dealerDiscount = $firstVariation
+                        ? $firstVariation->getDealerDiscountForDealer($customer)
+                        : $product->getB2BDiscountPercentage($customer);
+                    $grossPrice = $firstVariation ? $firstVariation->base_price : $product->price;
                     $minQty = $product->min_order_qty_b2b ?? 1;
-                    $piecesPerUnit = max(1, $product->per_quantity_pieces ?? 1);
+                    $piecesPerUnit = $firstVariation ? $firstVariation->total_pieces : max(1, $product->per_quantity_pieces ?? 1);
                 @endphp
                 <div class="group bg-white border border-slate-100 rounded-3xl p-6 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 flex flex-col"
                      x-data="{ 
                         quantity: {{ $minQty }}, 
                         unitPrice: {{ $discountedPrice }},
                         piecesPerUnit: {{ $piecesPerUnit }},
-                        originalPrice: {{ $originalPrice }},
                         get pieceNetRate() { return (this.unitPrice / this.piecesPerUnit).toFixed(2) },
                         get total() { return (this.quantity * this.unitPrice).toFixed(2) },
-                        get totalPieces() { return (this.quantity * this.piecesPerUnit) },
-                        get totalSavings() { return (this.quantity * (this.originalPrice - this.unitPrice)).toFixed(2) },
-                        get discountPerPiece() { return ((this.originalPrice - this.unitPrice) / this.piecesPerUnit).toFixed(2) }
+                        get totalPieces() { return (this.quantity * this.piecesPerUnit) }
                      }">
                     <div class="flex items-center gap-6 mb-6">
                         <div class="relative w-24 h-24 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform duration-500 shadow-sm border border-slate-100">
@@ -61,9 +62,6 @@
                                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                 </div>
                             @endif
-                            <div class="absolute top-0 right-0 p-1">
-                                <span class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg uppercase">{{ $discountPercentage }}%</span>
-                            </div>
                         </div>
 
                         <div class="flex-1 min-w-0">
@@ -73,13 +71,23 @@
                             <div class="mt-4 space-y-2">
                                 <div class="flex items-baseline gap-2">
                                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Net Rate (Per PC):</span>
+                                    @if($dealerDiscount > 0)
+                                        <span class="text-xs text-slate-400 line-through">₹{{ number_format(($grossPrice / max(1, $piecesPerUnit)), 2) }}</span>
+                                    @endif
                                     <span class="text-xs font-black text-slate-900 tracking-tighter">₹<span x-text="pieceNetRate"></span></span>
                                 </div>
                                 <div class="flex items-baseline gap-2">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Net Piece Rate (Unit):</span>
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Net Rate (Per Carton):</span>
+                                    @if($dealerDiscount > 0)
+                                        <span class="text-sm text-slate-400 line-through">₹{{ number_format($grossPrice, 2) }}</span>
+                                    @endif
                                     <span class="text-xl font-black text-emerald-600 tracking-tight">₹{{ number_format($discountedPrice, 2) }}</span>
-                                    <span class="text-xs line-through text-slate-300 font-bold">₹{{ number_format($originalPrice, 2) }}</span>
                                 </div>
+                                @if($dealerDiscount > 0)
+                                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                                        Dealer Disc: {{ $dealerDiscount }}% OFF
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -87,8 +95,8 @@
                     <div class="space-y-4 flex-1">
                         <div class="grid grid-cols-2 gap-2">
                             <div class="p-3 bg-slate-50 rounded-2xl flex flex-col justify-center border border-slate-100/50 group-hover:border-emerald-100 transition-colors">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Discount per piece</p>
-                                <p class="text-sm font-black text-emerald-600 tracking-tight">Save ₹<span x-text="discountPerPiece"></span></p>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Per PC Rate</p>
+                                <p class="text-sm font-black text-slate-900 tracking-tight">₹<span x-text="pieceNetRate"></span></p>
                             </div>
                             <div class="p-3 bg-slate-50 rounded-2xl flex flex-col justify-center border border-slate-100/50 group-hover:border-slate-200 transition-colors text-center">
                                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Order MOQ</p>
@@ -117,12 +125,12 @@
                                 </div>
                                 <div class="flex justify-between items-end mt-2 pt-2 border-t border-slate-200/30">
                                     <div>
-                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Cost</p>
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Net Cost</p>
                                         <p class="text-lg font-black text-red-600 tracking-tighter">₹<span x-text="total"></span></p>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Discount</p>
-                                        <p class="text-xs font-black text-emerald-600 tracking-tight">₹<span x-text="totalSavings"></span></p>
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Units</p>
+                                        <p class="text-xs font-black text-slate-900 tracking-tight"><span x-text="quantity"></span> Case(s)</p>
                                     </div>
                                 </div>
                             </div>

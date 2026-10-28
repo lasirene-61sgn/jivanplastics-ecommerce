@@ -93,6 +93,11 @@ class ProductController extends Controller
             'variations.*.piece_price' => 'required|numeric|min:0',
             'variations.*.total_pieces' => 'required|integer|min:1',
             'variations.*.gst_percentage' => 'nullable|numeric|min:0|max:100',
+            'variations.*.special_discount' => 'nullable|numeric|min:0|max:100',
+            'variations.*.dealer_special_discounts' => 'nullable|array',
+            'variations.*.dealer_special_discounts.*' => 'nullable|numeric|min:0|max:100',
+            'variations.*.dealer_discounts' => 'nullable|array',
+            'variations.*.dealer_discounts.*' => 'nullable|numeric|min:0|max:100',
         ]);
 
         // Create the Main Product
@@ -115,6 +120,7 @@ class ProductController extends Controller
                 $piecePrice = $item['piece_price'] ?? 0;
                 $totalPieces = $item['total_pieces'] ?? 1;
                 $gstPercent = $item['gst_percentage'] ?? 0;
+                $specialDiscount = $item['special_discount'] ?? 0;
 
                 // Collect unique attributes
                 if (!empty($item['size'])) $sizes[] = trim($item['size']);
@@ -126,6 +132,26 @@ class ProductController extends Controller
                 $gstAmount = $subtotal * ($gstPercent / 100);
                 $totalWithGst = $subtotal + $gstAmount;
 
+                // Process per-dealer special discounts
+                $dealerSpecialDiscounts = [];
+                if (!empty($item['dealer_special_discounts']) && is_array($item['dealer_special_discounts'])) {
+                    foreach ($item['dealer_special_discounts'] as $dId => $dVal) {
+                        if ($dVal !== null && $dVal !== '' && is_numeric($dVal) && $dVal >= 0) {
+                            $dealerSpecialDiscounts[(int) $dId] = (float) $dVal;
+                        }
+                    }
+                }
+
+                // Process per-dealer visible dealer discounts
+                $dealerDiscounts = [];
+                if (!empty($item['dealer_discounts']) && is_array($item['dealer_discounts'])) {
+                    foreach ($item['dealer_discounts'] as $dId => $dVal) {
+                        if ($dVal !== null && $dVal !== '' && is_numeric($dVal) && $dVal >= 0) {
+                            $dealerDiscounts[(int) $dId] = (float) $dVal;
+                        }
+                    }
+                }
+
                 $product->variations()->create([
                     'size' => $item['size'] ?? null,
                     'thickness' => $item['thickness'] ?? null,
@@ -133,6 +159,9 @@ class ProductController extends Controller
                     'piece_price' => $piecePrice,
                     'total_pieces' => $totalPieces,
                     'gst_percentage' => $gstPercent,
+                    'special_discount' => $specialDiscount,
+                    'dealer_special_discounts' => !empty($dealerSpecialDiscounts) ? $dealerSpecialDiscounts : null,
+                    'dealer_discounts' => !empty($dealerDiscounts) ? $dealerDiscounts : null,
                     'total_price' => $totalWithGst,
                 ]);
             }
@@ -216,6 +245,11 @@ class ProductController extends Controller
             'variations' => 'required|array|min:1',
             'variations.*.piece_price' => 'required|numeric',
             'variations.*.total_pieces' => 'required|integer',
+            'variations.*.special_discount' => 'nullable|numeric|min:0|max:100',
+            'variations.*.dealer_special_discounts' => 'nullable|array',
+            'variations.*.dealer_special_discounts.*' => 'nullable|numeric|min:0|max:100',
+            'variations.*.dealer_discounts' => 'nullable|array',
+            'variations.*.dealer_discounts.*' => 'nullable|numeric|min:0|max:100',
         ]);
 
         // Update basic info
@@ -237,6 +271,26 @@ class ProductController extends Controller
             if (!empty($item['thickness'])) $thicknesses[] = trim($item['thickness']);
             if (!empty($item['color'])) $colors[] = trim($item['color']);
 
+            // Process per-dealer special discounts
+            $dealerSpecialDiscounts = [];
+            if (!empty($item['dealer_special_discounts']) && is_array($item['dealer_special_discounts'])) {
+                foreach ($item['dealer_special_discounts'] as $dId => $dVal) {
+                    if ($dVal !== null && $dVal !== '' && is_numeric($dVal) && $dVal >= 0) {
+                        $dealerSpecialDiscounts[(int) $dId] = (float) $dVal;
+                    }
+                }
+            }
+
+            // Process per-dealer visible dealer discounts
+            $dealerDiscounts = [];
+            if (!empty($item['dealer_discounts']) && is_array($item['dealer_discounts'])) {
+                foreach ($item['dealer_discounts'] as $dId => $dVal) {
+                    if ($dVal !== null && $dVal !== '' && is_numeric($dVal) && $dVal >= 0) {
+                        $dealerDiscounts[(int) $dId] = (float) $dVal;
+                    }
+                }
+            }
+
             $product->variations()->create([
                 'size' => $item['size'] ?? null,
                 'thickness' => $item['thickness'] ?? null,
@@ -244,6 +298,9 @@ class ProductController extends Controller
                 'piece_price' => $item['piece_price'],
                 'total_pieces' => $item['total_pieces'],
                 'gst_percentage' => $item['gst_percentage'] ?? 0,
+                'special_discount' => $item['special_discount'] ?? 0,
+                'dealer_special_discounts' => !empty($dealerSpecialDiscounts) ? $dealerSpecialDiscounts : null,
+                'dealer_discounts' => !empty($dealerDiscounts) ? $dealerDiscounts : null,
                 'total_price' => $subtotal + $gstAmount,
             ]);
         }

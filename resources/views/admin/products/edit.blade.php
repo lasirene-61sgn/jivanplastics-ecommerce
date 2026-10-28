@@ -3,7 +3,7 @@
 @section('title', 'Edit Product')
 
 @section('content')
-<div class="max-w-6xl mx-auto pb-12">
+<div class="w-full pb-12">
     @if($product->images->count() > 0)
         @foreach($product->images as $image)
             <form id="delete-image-form-{{ $image->id }}" action="{{ route('admin.products.destroy-image', [$product->id, $image->id]) }}" method="POST" class="hidden">
@@ -20,8 +20,9 @@
             <input type="hidden" name="page" value="{{ request('page') }}">
         @endif
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-            <h3 class="text-lg font-bold text-slate-900 mb-6">Edit Basic Information</h3>
+        <div class="max-w-6xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                <h3 class="text-lg font-bold text-slate-900 mb-6">Edit Basic Information</h3>
             <div class="space-y-4">
                 <div>
                     <label class="text-sm font-semibold text-slate-700">Product Name *</label>
@@ -71,89 +72,133 @@
                 </div>
             </div>
         </div>
-
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden" 
-             x-data="{ 
-                variations: [],
-                add() { this.variations.push({ size: '', thickness: '', color: '', piece_price: 0, total_pieces: 1, gst_percentage: 18 }) },
-                remove(index) { if(this.variations.length > 1) this.variations.splice(index, 1) }
-             }" 
-             x-init="variations = {{ $product->variations->count() > 0 ? $product->variations->toJson() : '[{ size: \'\', thickness: \'\', color: \'\', piece_price: 0, total_pieces: 1, gst_percentage: 18 }]' }}">
-            
-            <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                <div>
-                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        Product Specifications
-                    </h3>
-                    <p class="text-[10px] text-slate-400 mt-1 uppercase font-semibold">Modify technical details and pricing for this product</p>
-                </div>
-                <button type="button" @click="add()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center group">
-                    <svg class="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Add New Variation
-                </button>
-            </div>
-            
-            <div class="p-8 overflow-x-auto">
-                <table class="w-full text-left border-separate border-spacing-y-4">
-                    <thead>
-                        <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                            <th class="px-4 pb-2 text-left">Size</th>
-                            <th class="px-4 pb-2 text-left">Thickness</th>
-                            <th class="px-4 pb-2 text-left">Color</th>
-                            <th class="px-4 pb-2 w-32">Price/Pc (₹)</th>
-                            <th class="px-4 pb-2 w-24">Qty/Unit</th>
-                            <th class="px-4 pb-2 w-24">GST %</th>
-                            <th class="px-4 pb-2 text-right">Total (Incl. GST)</th>
-                            <th class="px-4 pb-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="(v, index) in variations" :key="index">
-                            <tr class="group bg-white hover:bg-slate-50 transition-colors border border-slate-100">
-                                <td class="px-4 py-3 first:rounded-l-2xl border-y border-l border-slate-100 group-hover:border-indigo-100">
-                                    <input type="text" :name="'variations['+index+'][size]'" x-model="v.size" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all">
-                                </td>
-                                <td class="px-4 py-3 border-y border-slate-100 group-hover:border-indigo-100">
-                                    <input type="text" :name="'variations['+index+'][thickness]'" x-model="v.thickness" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all">
-                                </td>
-                                <td class="px-4 py-3 border-y border-slate-100 group-hover:border-indigo-100">
-                                    <input type="text" :name="'variations['+index+'][color]'" x-model="v.color" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all">
-                                </td>
-                                <td class="px-4 py-3 border-y border-slate-100 group-hover:border-indigo-100">
-                                    <div class="relative">
-                                        <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">₹</span>
-                                        <input type="number" :name="'variations['+index+'][piece_price]'" x-model="v.piece_price" step="0.01" class="w-full pl-7 bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-slate-700">
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 border-y border-slate-100 group-hover:border-indigo-100">
-                                    <input type="number" :name="'variations['+index+'][total_pieces]'" x-model="v.total_pieces" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-center">
-                                </td>
-                                <td class="px-4 py-3 border-y border-slate-100 group-hover:border-indigo-100">
-                                    <input type="number" :name="'variations['+index+'][gst_percentage]'" x-model="v.gst_percentage" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-2 text-center font-bold text-slate-500">
-                                </td>
-                                <td class="px-4 py-3 border-y border-slate-100 group-hover:border-indigo-100 text-right">
-                                    <div class="inline-flex flex-col items-end">
-                                        <span class="text-[9px] text-slate-400 uppercase font-black tracking-widest">Calculated</span>
-                                        <span class="text-sm font-black text-indigo-600">
-                                            ₹<span x-text="((v.piece_price * v.total_pieces) * (1 + v.gst_percentage/100)).toFixed(2)"></span>
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 last:rounded-r-2xl border-y border-r border-slate-100 group-hover:border-indigo-100 text-center">
-                                    <button type="button" @click="remove(index)" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
         </div>
 
+        <div class="w-full bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+             x-data="{ 
+                 variations: [],
+                 add() { this.variations.push({ size: '', thickness: '', color: '', piece_price: 0, total_pieces: 1, gst_percentage: 18, special_discount: 0, dealer_special_discounts: {}, dealer_discounts: {} }) },
+                 remove(index) { if(this.variations.length > 1) this.variations.splice(index, 1) }
+              }" 
+              x-init="variations = {{ $product->variations->count() > 0 ? $product->variations->map(fn($v) => array_merge($v->toArray(), [
+                  'special_discount' => (float)($v->special_discount ?? 0),
+                  'dealer_special_discounts' => $v->dealer_special_discounts ?? new \stdClass(),
+                  'dealer_discounts' => $v->dealer_discounts ?? new \stdClass()
+              ]))->toJson() : '[{ size: \'\', thickness: \'\', color: \'\', piece_price: 0, total_pieces: 1, gst_percentage: 18, special_discount: 0, dealer_special_discounts: {}, dealer_discounts: {} }]' }}">
+             
+             <div class="p-6 lg:p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                 <div>
+                     <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
+                         <svg class="w-5 h-5 mr-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                         Product Specifications
+                     </h3>
+                     <p class="text-[10px] text-slate-400 mt-1 uppercase font-semibold">Modify technical details and pricing for this product</p>
+                 </div>
+                 <button type="button" @click="add()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center group">
+                     <svg class="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                     Add New Variation
+                 </button>
+             </div>
+             
+             <div class="p-6 lg:p-8 overflow-x-auto w-full">
+                 <table class="w-full min-w-full text-left border-separate border-spacing-y-4">
+                     <thead>
+                         <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
+                             <th class="px-3 pb-2 text-left min-w-[110px]">Size</th>
+                             <th class="px-3 pb-2 text-left min-w-[110px]">Thickness</th>
+                             <th class="px-3 pb-2 text-left min-w-[110px]">Color</th>
+                             <th class="px-3 pb-2 min-w-[110px]">Price/Pc (₹)</th>
+                             <th class="px-3 pb-2 min-w-[90px]">Qty/Unit</th>
+                             <th class="px-3 pb-2 min-w-[80px]">GST %</th>
+                             <th class="px-3 pb-2 min-w-[200px] text-center text-emerald-600 font-black">Dealer Disc %</th>
+                             <th class="px-3 pb-2 min-w-[200px] text-center text-indigo-600 font-black">Special Disc %</th>
+                             <th class="px-3 pb-2 min-w-[130px] text-right">Total (Incl. GST)</th>
+                             <th class="px-3 pb-2 w-12 text-center"></th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         <template x-for="(v, index) in variations" :key="index">
+                             <tr class="group bg-white hover:bg-slate-50 transition-colors border border-slate-100">
+                                 <td class="px-3 py-3 first:rounded-l-2xl border-y border-l border-slate-100 group-hover:border-indigo-100">
+                                     <input type="text" :name="'variations['+index+'][size]'" x-model="v.size" placeholder="Size" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 px-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800">
+                                 </td>
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100">
+                                     <input type="text" :name="'variations['+index+'][thickness]'" x-model="v.thickness" placeholder="Thickness" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 px-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800">
+                                 </td>
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100">
+                                     <input type="text" :name="'variations['+index+'][color]'" x-model="v.color" placeholder="Color" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 px-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800">
+                                 </td>
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100">
+                                     <div class="relative">
+                                         <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">₹</span>
+                                         <input type="number" :name="'variations['+index+'][piece_price]'" x-model="v.piece_price" step="0.01" class="w-full pl-7 pr-2 bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-slate-700">
+                                     </div>
+                                 </td>
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100">
+                                     <input type="number" :name="'variations['+index+'][total_pieces]'" x-model="v.total_pieces" class="w-full bg-white border-slate-200 rounded-xl text-sm py-2 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-center font-bold text-slate-800">
+                                 </td>
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100">
+                                     <input type="number" :name="'variations['+index+'][gst_percentage]'" x-model="v.gst_percentage" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-2 text-center font-bold text-slate-600">
+                                 </td>
+                                 <!-- Per-Dealer Visible Dealer Discount Column -->
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-emerald-100">
+                                     <div class="flex flex-col gap-1.5 min-w-[200px]">
+                                         @foreach($dealers as $dealer)
+                                             <div class="flex items-center justify-between gap-1.5 bg-emerald-50/70 border border-emerald-200/80 px-2.5 py-1.5 rounded-lg shadow-xs">
+                                                 <span class="text-[11px] font-bold text-slate-700 truncate max-w-[100px]" title="{{ $dealer->company_name ?? $dealer->name }}">{{ $dealer->company_name ?? $dealer->name }}</span>
+                                                 <div class="relative w-20">
+                                                     <input type="number" 
+                                                            :name="'variations['+index+'][dealer_discounts][{{ $dealer->id }}]'" 
+                                                            x-model="v.dealer_discounts[{{ $dealer->id }}]" 
+                                                            step="0.01" min="0" max="100" placeholder="0" 
+                                                            class="w-full pr-5 pl-1.5 py-1 text-xs text-right border border-emerald-200 rounded font-bold text-emerald-600 focus:ring-1 focus:ring-emerald-500 bg-white shadow-inner">
+                                                     <span class="absolute right-1.5 top-1 text-[9px] text-slate-400 font-bold">%</span>
+                                                 </div>
+                                             </div>
+                                         @endforeach
+                                     </div>
+                                 </td>
+                                 <!-- Per-Dealer Special Discount Column -->
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100">
+                                     <div class="flex flex-col gap-1.5 min-w-[200px]">
+                                         @foreach($dealers as $dealer)
+                                             <div class="flex items-center justify-between gap-1.5 bg-indigo-50/70 border border-indigo-200/80 px-2.5 py-1.5 rounded-lg shadow-xs">
+                                                 <span class="text-[11px] font-bold text-slate-700 truncate max-w-[100px]" title="{{ $dealer->company_name ?? $dealer->name }}">{{ $dealer->company_name ?? $dealer->name }}</span>
+                                                 <div class="relative w-20">
+                                                     <input type="number" 
+                                                            :name="'variations['+index+'][dealer_special_discounts][{{ $dealer->id }}]'" 
+                                                            x-model="v.dealer_special_discounts[{{ $dealer->id }}]" 
+                                                            step="0.01" min="0" max="100" placeholder="0" 
+                                                            class="w-full pr-5 pl-1.5 py-1 text-xs text-right border border-indigo-200 rounded font-bold text-indigo-600 focus:ring-1 focus:ring-indigo-500 bg-white shadow-inner">
+                                                     <span class="absolute right-1.5 top-1 text-[9px] text-slate-400 font-bold">%</span>
+                                                 </div>
+                                             </div>
+                                         @endforeach
+                                     </div>
+                                 </td>
+                                 <td class="px-3 py-3 border-y border-slate-100 group-hover:border-indigo-100 text-right whitespace-nowrap">
+                                     <div class="inline-flex flex-col items-end">
+                                         <span class="text-[9px] text-slate-400 uppercase font-black tracking-widest">Calculated</span>
+                                         <span class="text-base font-black text-indigo-600">
+                                             ₹<span x-text="((v.piece_price * v.total_pieces) * (1 + v.gst_percentage/100)).toFixed(2)"></span>
+                                         </span>
+                                     </div>
+                                 </td>
+                                 <td class="px-3 py-3 last:rounded-r-2xl border-y border-r border-slate-100 group-hover:border-indigo-100 text-center">
+                                     <button type="button" @click="remove(index)" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                     </button>
+                                 </td>
+                             </tr>
+                         </template>
+                     </tbody>
+                 </table>
+             </div>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {{-- Categories and Actions (Standard Width) --}}
+        <div class="max-w-6xl mx-auto space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-4"
                  x-data="{ 
                     selectedCategory: '{{ $product->category_id }}', 
@@ -359,7 +404,7 @@
 
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <!-- <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                 <h3 class="text-xs font-bold text-indigo-600 uppercase mb-4">Dealer Discounts (%)</h3>
                 <div class="space-y-2 max-h-[150px] overflow-y-auto">
                     @foreach($dealers as $dealer)
@@ -370,10 +415,10 @@
                         </div>
                     @endforeach
                 </div>
-            </div>
+            </div> -->
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <!-- <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             <h3 class="text-xs font-bold text-indigo-600 uppercase mb-4">Update Quantity Restrictions</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -384,11 +429,12 @@
                     </div>
                 </div>
                 </div>
-        </div>
+        </div> -->
 
-        <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-xl hover:bg-indigo-700">
-            Apply Product Updates
-        </button>
+            <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-xl hover:bg-indigo-700">
+                Apply Product Updates
+            </button>
+        </div>
     </form>
 </div>
 <script>

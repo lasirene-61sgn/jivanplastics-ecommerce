@@ -184,8 +184,26 @@ class CartController extends Controller
             $originalPrice = $basePriceWithoutGst;
 
             if ($isB2B && $customer) {
-                $discountPercentage = $product->getB2BDiscountPercentage($customer);
-                $actualPrice = $basePriceWithoutGst - ($basePriceWithoutGst * $discountPercentage / 100);
+                // Special discount silently sets the dealer's base rate
+                $specialDiscount = $variation ? $variation->getSpecialDiscountForDealer($customer) : null;
+                $effectiveBase = $basePriceWithoutGst;
+                if ($specialDiscount !== null && $specialDiscount > 0) {
+                    $effectiveBase = $basePriceWithoutGst - ($basePriceWithoutGst * $specialDiscount / 100);
+                }
+
+                // Dealer Discount is the visible discount shown on products, cart, order, and invoice
+                $dealerDiscount = $variation 
+                    ? $variation->getDealerDiscountForDealer($customer) 
+                    : $product->getB2BDiscountPercentage($customer);
+
+                if ($dealerDiscount > 0) {
+                    $originalPrice = $effectiveBase;
+                    $actualPrice = $effectiveBase - ($effectiveBase * $dealerDiscount / 100);
+                } else {
+                    // If no visible dealer discount, original price equals actual price
+                    $originalPrice = $effectiveBase;
+                    $actualPrice = $effectiveBase;
+                }
             }
 
             if ($isPieces) {

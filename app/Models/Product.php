@@ -192,6 +192,81 @@ class Product extends Model
     }
 
     /**
+     * Check if product has any dealer discount (category, product-level, or variation-level) for a customer.
+     *
+     * @param  \App\Models\Customer|null  $customer
+     * @return bool
+     */
+    public function hasB2BDiscountForCustomer($customer = null)
+    {
+        if (!$customer || $customer->customer_type !== 'dealer') {
+            return false;
+        }
+
+        if ($this->getB2BDiscountPercentage($customer) > 0) {
+            return true;
+        }
+
+        if ($this->relationLoaded('variations') || $this->variations()->exists()) {
+            foreach ($this->variations as $variation) {
+                $specialDisc = $variation->getSpecialDiscountForDealer($customer);
+                if ($specialDisc !== null && $specialDisc > 0) {
+                    return true;
+                }
+                $dealerDisc = $variation->getDealerDiscountForDealer($customer);
+                if ($dealerDisc !== null && $dealerDisc > 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get maximum effective B2B discount percentage across variations for a dealer.
+     *
+     * @param  \App\Models\Customer|null  $customer
+     * @return float
+     */
+    public function getMaxB2BDiscountPercentage($customer = null)
+    {
+        if (!$customer || $customer->customer_type !== 'dealer') {
+            return 0;
+        }
+
+        $basePercentage = (float) $this->getB2BDiscountPercentage($customer);
+        $max = $basePercentage;
+
+        if ($this->relationLoaded('variations') || $this->variations()->exists()) {
+            foreach ($this->variations as $variation) {
+                $eff = (float) $variation->getEffectiveB2BDiscountPercentage($customer);
+                if ($eff > $max) {
+                    $max = $eff;
+                }
+            }
+        }
+
+        return (float) $max;
+    }
+
+    /**
+     * Calculate the B2B net piece rate for this product (first variation or base product).
+     *
+     * @param  \App\Models\Customer|null  $customer
+     * @return float
+     */
+    public function getB2BPiecePrice($customer = null)
+    {
+        $firstVariation = $this->variations ? $this->variations->first() : null;
+        if ($firstVariation) {
+            return $firstVariation->getB2BPiecePrice($customer);
+        }
+        $pieces = max(1, (int) ($this->per_quantity_pieces ?? 1));
+        return $this->getB2BDiscountedPrice($customer) / $pieces;
+    }
+
+    /**
      * Calculate the price including GST.
      *
      * @return float

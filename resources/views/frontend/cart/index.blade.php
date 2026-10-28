@@ -89,14 +89,30 @@
                                 </div>
                             </td>
                             <td style="padding: 1rem; text-align: center;">
-                                <div style="{{ $itemDiscountOnly > 0 ? 'text-decoration: line-through; color: #9ca3af; font-size: 0.85rem;' : 'color: #1f2937; font-weight: 600;' }}">
-                                    ₹{{ number_format($unitBase, 2) }}
-                                </div>
-                                @if($itemDiscountOnly > 0)
-                                    <div style="color: #1f2937; font-weight: 700; font-size: 1rem;">
-                                        ₹{{ number_format($unitToPay, 2) }}
+                                @if($isB2B)
+                                    @if($itemDiscountOnly > 0)
+                                        <div style="text-decoration: line-through; color: #9ca3af; font-size: 0.85rem;">
+                                            ₹{{ number_format($unitBase, 2) }}
+                                        </div>
+                                        <div style="color: #1f2937; font-weight: 700; font-size: 1rem;">
+                                            ₹{{ number_format($unitToPay, 2) }}
+                                        </div>
+                                        <span style="background-color: #d1fae5; color: #065f46; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Dealer Disc. Applied</span>
+                                    @else
+                                        <div style="color: #1f2937; font-weight: 700; font-size: 1rem;">
+                                            ₹{{ number_format($unitToPay, 2) }}
+                                        </div>
+                                    @endif
+                                @else
+                                    <div style="{{ $itemDiscountOnly > 0 ? 'text-decoration: line-through; color: #9ca3af; font-size: 0.85rem;' : 'color: #1f2937; font-weight: 600;' }}">
+                                        ₹{{ number_format($unitBase, 2) }}
                                     </div>
-                                    <span style="background-color: #d1fae5; color: #065f46; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; text-transform: uppercase;">Dealer Disc. Applied</span>
+                                    @if($itemDiscountOnly > 0)
+                                        <div style="color: #1f2937; font-weight: 700; font-size: 1rem;">
+                                            ₹{{ number_format($unitToPay, 2) }}
+                                        </div>
+                                        <span style="background-color: #d1fae5; color: #065f46; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; text-transform: uppercase;">Discount Applied</span>
+                                    @endif
                                 @endif
 
                                 @php
@@ -142,27 +158,51 @@
             <div style="width: 100%; max-width: 400px; background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem;">
                 <h3 style="font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 1.25rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem;">Order Summary</h3>
                 
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                    <span style="color: #6b7280;">Subtotal (Base):</span>
-                    <span style="font-weight: 500;">₹{{ number_format($subtotal, 2) }}</span>
-                </div>
-                
-                @if($totalDiscount > 0)
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; color: #059669;">
-                    <span style="font-weight: 600;">Dealer Discount:</span>
-                    <span style="font-weight: 600;">- ₹{{ number_format($totalDiscount, 2) }}</span>
-                </div>
+                @if($isB2B)
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <span style="color: #6b7280;">Subtotal (Gross):</span>
+                        <span style="font-weight: 500;">₹{{ number_format($subtotal, 2) }}</span>
+                    </div>
+                    
+                    @if($totalDiscount > 0)
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; color: #059669;">
+                        <span style="font-weight: 600;">Dealer Discount:</span>
+                        <span style="font-weight: 600;">- ₹{{ number_format($totalDiscount, 2) }}</span>
+                    </div>
+                    @endif
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <span style="color: #6b7280;">GST Total:</span>
+                        <span style="font-weight: 500;">+ ₹{{ number_format($totalGst, 2) }}</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 2px solid #f3f4f6; margin-top: 1rem;">
+                        <span style="font-weight: 800; font-size: 1.3rem;">Grand Total:</span>
+                        <span style="font-weight: 800; font-size: 1.3rem; color: #8B0000;">₹{{ number_format(($subtotal - $totalDiscount) + $totalGst, 2) }}</span>
+                    </div>
+                @else
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <span style="color: #6b7280;">Subtotal (Base):</span>
+                        <span style="font-weight: 500;">₹{{ number_format($subtotal, 2) }}</span>
+                    </div>
+                    
+                    @if($totalDiscount > 0)
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; color: #059669;">
+                        <span style="font-weight: 600;">Discount:</span>
+                        <span style="font-weight: 600;">- ₹{{ number_format($totalDiscount, 2) }}</span>
+                    </div>
+                    @endif
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <span style="color: #6b7280;">GST Total:</span>
+                        <span style="font-weight: 500;">+ ₹{{ number_format($totalGst, 2) }}</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 2px solid #f3f4f6; margin-top: 1rem;">
+                        <span style="font-weight: 800; font-size: 1.3rem;">Grand Total:</span>
+                        <span style="font-weight: 800; font-size: 1.3rem; color: #8B0000;">₹{{ number_format(($subtotal - $totalDiscount) + $totalGst, 2) }}</span>
+                    </div>
                 @endif
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                    <span style="color: #6b7280;">18% GST Total:</span>
-                    <span style="font-weight: 500;">+ ₹{{ number_format($totalGst, 2) }}</span>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 2px solid #f3f4f6; margin-top: 1rem;">
-                    <span style="font-weight: 800; font-size: 1.3rem;">Grand Total:</span>
-                    <span style="font-weight: 800; font-size: 1.3rem; color: #8B0000;">₹{{ number_format(($subtotal - $totalDiscount) + $totalGst, 2) }}</span>
-                </div>
                 
                 <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
                     <a href="{{ route('checkout.index') }}" style="display: block; text-align: center; background-color: #8B0000; color: white; padding: 0.8rem; border-radius: 0.5rem; font-weight: 700; text-decoration: none; transition: background 0.2s;">

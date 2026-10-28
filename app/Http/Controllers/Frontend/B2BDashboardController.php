@@ -195,7 +195,7 @@ class B2BDashboardController extends Controller
         $customer = Customer::where('email', Auth::user()->email)->first();
 
         // Load product relationships
-        $product->load(['images', 'category', 'subcategory', 'subSubcategory']);
+        $product->load(['images', 'category', 'subcategory', 'subSubcategory', 'variations']);
 
         return view('frontend.b2b.product-details', compact('product', 'customer'));
     }
@@ -645,27 +645,20 @@ class B2BDashboardController extends Controller
         $customer = Customer::where('email', Auth::user()->email)->first();
 
         // Get all categories with their B2B discounts, ordered from highest to lowest
-        // Get all products that have B2B discounts (either through category, subcategory, sub-subcategory or dealer-specific discounts)
+        // Get all products that have B2B discounts (category, subcategory, product-level, or variation-level dealer special discounts)
         $allProducts = Product::where('is_active', true)
-            ->with(['category', 'subcategory', 'subSubcategory'])
+            ->with(['category', 'subcategory', 'subSubcategory', 'images', 'variations'])
             ->get();
 
         // Filter products that have actual B2B discounts for this customer
         $products = $allProducts->filter(function ($product) use ($customer) {
-            $originalPrice = $product->price;
-            $discountedPrice = $product->getB2BDiscountedPrice($customer);
-            return $discountedPrice < $originalPrice; // Only include products with actual discounts
+            return $product->hasB2BDiscountForCustomer($customer);
         });
 
         // Sort products by discount percentage from highest to lowest
         $products = $products->sortByDesc(function ($product) use ($customer) {
-            $originalPrice = $product->price;
-            $discountedPrice = $product->getB2BDiscountedPrice($customer);
-            $discountAmount = $originalPrice - $discountedPrice;
-            $discountPercentage = $originalPrice > 0 ? ($discountAmount / $originalPrice) * 100 : 0;
-            return $discountPercentage; // Sort by discount percentage
-        })
-            ->values();
+            return $product->getMaxB2BDiscountPercentage($customer);
+        })->values();
 
         return view('frontend.b2b.discounts', compact('customer', 'products'));
     }

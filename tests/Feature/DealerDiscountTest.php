@@ -321,4 +321,51 @@ class DealerDiscountTest extends TestCase
         $discountedPrice = $product->getB2BDiscountedPrice($customer);
         $this->assertEquals(1000.00, $discountedPrice); // No discount for B2C
     }
+
+    /** @test */
+    public function variation_special_discount_applies_sequentially_with_dealer_discount()
+    {
+        // Create a dealer customer
+        $dealer = Customer::factory()->create([
+            'customer_type' => 'dealer',
+            'company_name' => 'Test Dealer Co',
+        ]);
+
+        // Create product
+        $product = Product::factory()->create([
+            'name' => 'Test Variation Product',
+            'price' => 1000.00,
+            'is_active' => true,
+        ]);
+
+        // Create 10% dealer discount on product
+        $product->dealerDiscounts()->create([
+            'customer_id' => $dealer->id,
+            'discount_percentage' => 10.00,
+            'is_active' => true,
+        ]);
+
+        // Create a variation with piece_price 100, total_pieces 10 (base carton 1000), special_discount 5%
+        $variation = $product->variations()->create([
+            'size' => '10x10',
+            'thickness' => '5mm',
+            'color' => 'Black',
+            'piece_price' => 100.00,
+            'total_pieces' => 10,
+            'gst_percentage' => 18.00,
+            'special_discount' => 5.00,
+            'total_price' => 1180.00,
+        ]);
+
+        // Sequential calculation:
+        // Base = 1000
+        // After 10% Dealer Discount = 900
+        // After 5% Variation Special Discount = 900 - (900 * 0.05) = 855
+        // Piece Rate = 855 / 10 = 85.5
+        $discountedCartonPrice = $variation->getB2BDiscountedPrice($dealer);
+        $discountedPiecePrice = $variation->getB2BPiecePrice($dealer);
+
+        $this->assertEquals(855.00, $discountedCartonPrice);
+        $this->assertEquals(85.50, $discountedPiecePrice);
+    }
 }

@@ -95,7 +95,7 @@ class CheckoutController extends Controller
             $lineDisc = $unitToPay * $item['quantity'];
             
             $subtotal += $lineBase;
-            $totalDealerDiscount += ($lineBase - $lineDisc);
+            $totalDealerDiscount += max(0, $lineBase - $lineDisc);
 
             // Variation lookup
             $variation = null;
@@ -124,8 +124,8 @@ class CheckoutController extends Controller
             $lineGst = $lineDisc * ($gstPct / 100);
             $totalGst += $lineGst;
 
-            // B2B Discount resolution
-            if ($customer->customer_type === 'dealer') {
+            // B2B Discount resolution (if not already reflected in dealer net price)
+            if ($customer->customer_type !== 'dealer') {
                 $b2bRule = $this->resolveB2BDiscountDetails($product, $customer);
                 if ($b2bRule && $b2bRule['percentage'] > 0) {
                     $itemDiscount = ($lineDisc * $b2bRule['percentage']) / 100;
@@ -258,7 +258,9 @@ class CheckoutController extends Controller
                     $totalGst += $gstAmount;
                 }
 
-                $discountAmount = max(0, ($originalBasePrice - $item['price']) * $item['quantity']);
+                $itemOriginalPrice = $item['original_price'] ?? $originalBasePrice;
+                $originalPrice = $itemOriginalPrice;
+                $discountAmount = max(0, ($itemOriginalPrice - $item['price']) * $item['quantity']);
             }
 
             $isPieces = isset($item['is_pieces']) && $item['is_pieces'];
@@ -272,7 +274,7 @@ class CheckoutController extends Controller
                 $piecePrice = $item['price'];
             }
 
-            if ($customer->customer_type === 'dealer') {
+            if ($customer->customer_type !== 'dealer') {
                 $b2bRule = $this->resolveB2BDiscountDetails($product, $customer);
                 if ($b2bRule && $b2bRule['percentage'] > 0) {
                     $b2bDiscountAmount += ($itemTotal * $b2bRule['percentage']) / 100;

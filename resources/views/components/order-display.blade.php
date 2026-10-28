@@ -64,6 +64,11 @@
                             @if($order->customer_type === 'dealer')
                             <p style="margin: 0.125rem 0; color: #6b7280; font-size: 0.8125rem; font-weight: bold;">
                                 Rate: ₹{{ number_format($item->piece_price, 2) }} / piece
+                                @if($item->discount_amount > 0)
+                                    <span style="font-size: 0.7rem; color: #059669; font-weight: 600; margin-left: 0.5rem; background-color: #d1fae5; padding: 1px 4px; border-radius: 3px;">
+                                        Dealer Disc: -₹{{ number_format($item->discount_amount, 2) }}
+                                    </span>
+                                @endif
                             </p>
                             @else
                             <p style="margin: 0.125rem 0; color: #6b7280; font-size: 0.75rem; font-style: italic;">
@@ -219,6 +224,11 @@
                         }
                     }
                 @endphp
+                @if($order->customer_type === 'dealer' && $order->discount_amount > 0)
+                <p style="margin: 0.25rem 0; color: #059669; font-size: 0.875rem;">
+                    <strong>Dealer Discount:</strong> -₹{{ number_format($order->discount_amount, 2) }}
+                </p>
+                @endif
                 <strong>Total Amount:</strong> 
                 @if($rejectedRefund > 0)
                     <span style="text-decoration: line-through; margin-right: 4px; font-size: 0.8em; color: #9ca3af;">₹{{ number_format($order->total, 2) }}</span>

@@ -258,13 +258,6 @@
                             @if($product->min_order_qty_b2b)
                             <div class="bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg border border-white/10">MOQ: {{ $product->min_order_qty_b2b }}</div>
                             @endif
-                            @php
-                            $customer = auth()->user()->customer ?? null;
-                            $discountedPrice = $product->getB2BDiscountedPrice($customer);
-                            @endphp
-                            @if($discountedPrice < $product->price)
-                                <div class="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg">Partner Deal</div>
-                                @endif
                         </div>
                     </a>
 
@@ -351,24 +344,63 @@
                                             }
                                         });
                                     },
+                                    customerId: {{ $customer ? $customer->id : 'null' }},
                                     get currentPieces() {
                                         return this.activeVariation ? parseInt(this.activeVariation.total_pieces) : this.basePieces;
                                     },
-                                    get originalUnitPrice() {
+                                    get dealerDiscountPercentage() {
+                                        if (this.activeVariation && this.activeVariation.dealer_discounts && this.customerId) {
+                                            let dDiscounts = this.activeVariation.dealer_discounts;
+                                            if (typeof dDiscounts === 'string') {
+                                                try { dDiscounts = JSON.parse(dDiscounts); } catch(e) {}
+                                            }
+                                            if (dDiscounts && dDiscounts[this.customerId] !== undefined && dDiscounts[this.customerId] !== null && dDiscounts[this.customerId] !== '') {
+                                                return parseFloat(dDiscounts[this.customerId]) || 0;
+                                            }
+                                        }
+                                        return parseFloat(this.discountPercentage) || 0;
+                                    },
+                                    get dealerSpecialDiscountPercentage() {
+                                        if (this.activeVariation && this.activeVariation.dealer_special_discounts && this.customerId) {
+                                            let discounts = this.activeVariation.dealer_special_discounts;
+                                            if (typeof discounts === 'string') {
+                                                try { discounts = JSON.parse(discounts); } catch(e) {}
+                                            }
+                                            if (discounts && discounts[this.customerId] !== undefined && discounts[this.customerId] !== null && discounts[this.customerId] !== '') {
+                                                return parseFloat(discounts[this.customerId]) || 0;
+                                            }
+                                        }
+                                        return null;
+                                    },
+                                    get grossCartonPrice() {
                                         if (this.activeVariation) {
-                                            return parseFloat(this.activeVariation.piece_price * this.activeVariation.total_pieces);
+                                             return parseFloat(this.activeVariation.piece_price * this.activeVariation.total_pieces);
                                         }
                                         return parseFloat(this.basePrice);
                                     },
+                                    get basePriceAfterSpecial() {
+                                        let base = this.grossCartonPrice;
+                                        let spec = this.dealerSpecialDiscountPercentage;
+                                        if (spec !== null && spec > 0) {
+                                            return base - (base * spec / 100);
+                                        }
+                                        return base;
+                                    },
                                     get unitPrice() {
-                                        let price = this.originalUnitPrice;
-                                        return (price - (price * this.discountPercentage / 100));
+                                        let base = this.basePriceAfterSpecial;
+                                        let dDisc = this.dealerDiscountPercentage;
+                                        if (dDisc > 0) {
+                                            return base - (base * dDisc / 100);
+                                        }
+                                        return base;
+                                    },
+                                    get strikethroughPrice() {
+                                        return this.basePriceAfterSpecial;
                                     },
                                     get pieceNetRate() { return (this.unitPrice / this.currentPieces).toFixed(2) },
+                                    get pieceGrossRate() { return (this.strikethroughPrice / this.currentPieces).toFixed(2) },
                                     get total() { return (this.quantity * this.unitPrice).toFixed(2) },
                                     get totalPieces() { return (this.quantity * this.currentPieces) },
-                                    get totalSavings() { return (this.quantity * (this.originalUnitPrice - this.unitPrice)).toFixed(2) },
-                                    get discountPerPiece() { return ((this.originalUnitPrice - this.unitPrice) / this.currentPieces).toFixed(2) },
                                     get canAddToCart() {
                                         if ({{ count($productSizes) > 0 ? 'true' : 'false' }} && !this.selectedSize) return false;
                                         if ({{ count($productThicknesses) > 0 ? 'true' : 'false' }} && !this.selectedThickness) return false;
@@ -437,19 +469,26 @@
                             <div class="mt-4 space-y-2">
                                 <div class="flex items-baseline gap-2">
                                     <span class="text-[14px] font-black text-slate-400 uppercase tracking-widest">Price per Rate Plus GST:</span>
-                                    <span class="text-lg font-black text-slate-900 tracking-tighter">₹<span x-text="pieceNetRate"></span></span>
+                                    <div class="flex items-baseline gap-2">
+                                        <template x-if="dealerDiscountPercentage > 0">
+                                            <span class="text-sm font-normal text-slate-400 line-through">₹<span x-text="pieceGrossRate"></span></span>
+                                        </template>
+                                        <span class="text-lg font-black text-slate-900 tracking-tighter">₹<span x-text="pieceNetRate"></span></span>
+                                    </div>
                                 </div>
                                 <div class="flex items-baseline gap-2">
                                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price/Cartoon Plus GST:</span>
-                                    <span class="text-xl font-black text-red-600 tracking-tighter">₹<span x-text="unitPrice.toFixed(2)"></span></span>
-                                    <template x-if="unitPrice < originalUnitPrice">
-                                        <span class="text-xs line-through text-slate-300 font-bold">₹<span x-text="originalUnitPrice.toFixed(2)"></span></span>
-                                    </template>
+                                    <div class="flex items-baseline gap-2">
+                                        <template x-if="dealerDiscountPercentage > 0">
+                                            <span class="text-sm font-normal text-slate-400 line-through">₹<span x-text="strikethroughPrice.toFixed(2)"></span></span>
+                                        </template>
+                                        <span class="text-xl font-black text-red-600 tracking-tighter">₹<span x-text="unitPrice.toFixed(2)"></span></span>
+                                    </div>
                                 </div>
-                                <template x-if="discountAmount > 0 || discountPercentage > 0">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[9px] font-black text-emerald-600 uppercase tracking-tight">Discount per piece:</span>
-                                        <span class="text-[10px] font-bold text-emerald-600">₹<span x-text="discountPerPiece"></span></span>
+                                <template x-if="dealerDiscountPercentage > 0">
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                        <span>Dealer Discount: <span x-text="dealerDiscountPercentage"></span>% OFF</span>
                                     </div>
                                 </template>
                             </div>
@@ -474,7 +513,7 @@
                                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Calculation</p>
                                     <p class="text-[10px] font-bold text-slate-600"><span x-text="quantity"></span> units x ₹<span x-text="unitPrice.toFixed(2)"></span></p>
                                 </div>
-                                 <div class="flex justify-between items-end mt-2 pt-2 border-t border-slate-200/30">
+                                <div class="flex justify-between items-end mt-2 pt-2 border-t border-slate-200/30">
                                     <div class="flex flex-col gap-2">
                                         <div>
                                             <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Tax (GST <span x-text="gstPercentage"></span>%)</p>
@@ -485,12 +524,6 @@
                                             <p class="text-xl font-black text-red-600 tracking-tighter">₹<span x-text="(parseFloat(total) + (total * (gstPercentage / 100))).toFixed(2)"></span></p>
                                         </div>
                                     </div>
-                                    <template x-if="totalSavings > 0">
-                                        <div class="text-right">
-                                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Savings</p>
-                                            <p class="text-xs font-black text-emerald-600 tracking-tight">₹<span x-text="totalSavings"></span></p>
-                                        </div>
-                                    </template>
                                 </div>
                             </div>
                         </div>

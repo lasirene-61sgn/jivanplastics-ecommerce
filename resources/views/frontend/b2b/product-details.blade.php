@@ -40,10 +40,6 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
                         MOQ: {{ $product->min_order_qty_b2b }}
                     </div>
                     @endif
-
-                    @if($discountedPrice < $product->price)
-                        <div class="bg-emerald-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg">Partner Deal</div>
-                        @endif
                 </div>
 
                 <!-- Thumbnails if available -->
@@ -60,36 +56,95 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
 
             <!-- Product Details Section -->
             @php
-            $productSizes = $product->size ? explode(',', $product->size) : [];
-            $productThicknesses = $product->thickness ? explode(',', $product->thickness) : [];
-            $productColors = $product->color ? explode(',', $product->color) : [];
+            $productSizes = $product->size ? explode(',', $product->size) : $product->variations->pluck('size')->unique()->filter()->map(fn($s) => trim($s))->toArray();
+            $productThicknesses = $product->thickness ? explode(',', $product->thickness) : $product->variations->pluck('thickness')->unique()->filter()->map(fn($t) => trim($t))->toArray();
+            $productColors = $product->color ? explode(',', $product->color) : $product->variations->pluck('color')->unique()->filter()->map(fn($c) => trim($c))->toArray();
             $cart = session('cart', []);
             $cartProductIds = collect($cart)->pluck('product_id')->map(fn($id) => (int)$id)->unique()->values()->toArray();
             $isProductInCart = in_array((int)$product->id, $cartProductIds);
             @endphp
             <div class="p-8 lg:p-12 flex flex-col h-full bg-white" x-data="{ 
                 quantity: {{ $b2bMin }}, 
-                unitPrice: {{ $discountedPrice }},
+                dealerDiscountPercentage: {{ $product->getB2BDiscountPercentage($customer) }},
+                basePrice: {{ $product->price > 0 ? $product->price : ($product->variations->first()->total_price ?? 0) }},
                 basePieces: {{ $product->per_quantity_pieces ?? 1 }},
                 thicknessPieces: @js($product->thickness_pieces ?? []),
-                originalUnitPrice: {{ $product->price }},
+                variations: @js($product->variations),
                 selectedSize: '{{ trim($productSizes[0] ?? '') }}',
                 selectedThickness: '{{ trim($productThicknesses[0] ?? '') }}',
                 selectedColor: '{{ trim($productColors[0] ?? '') }}',
                 isInCart: {{ $isProductInCart ? 'true' : 'false' }},
                 isAdding: false,
+                get activeVariation() {
+                    const trim = (s) => (s || '').toString().trim();
+                    return this.variations.find(v => 
+                        (!v.size || trim(v.size) == trim(this.selectedSize)) && 
+                        (!v.thickness || trim(v.thickness) == trim(this.selectedThickness)) && 
+                        (!v.color || trim(v.color) == trim(this.selectedColor))
+                    );
+                },
+                customerId: {{ $customer ? $customer->id : 'null' }},
                 get currentPieces() {
+                    if (this.activeVariation) return parseInt(this.activeVariation.total_pieces);
                     return parseInt(this.thicknessPieces[this.selectedThickness] || this.basePieces);
                 },
+                get dealerDiscountPercentage() {
+                    if (this.activeVariation && this.activeVariation.dealer_discounts && this.customerId) {
+                        let dDiscounts = this.activeVariation.dealer_discounts;
+                        if (typeof dDiscounts === 'string') {
+                            try { dDiscounts = JSON.parse(dDiscounts); } catch(e) {}
+                        }
+                        if (dDiscounts && dDiscounts[this.customerId] !== undefined && dDiscounts[this.customerId] !== null && dDiscounts[this.customerId] !== '') {
+                            return parseFloat(dDiscounts[this.customerId]) || 0;
+                        }
+                    }
+                    return parseFloat(this.baseDealerDiscountPercentage ?? this.discountPercentage ?? 0) || 0;
+                },
+                get dealerSpecialDiscountPercentage() {
+                    if (this.activeVariation && this.activeVariation.dealer_special_discounts && this.customerId) {
+                        let discounts = this.activeVariation.dealer_special_discounts;
+                        if (typeof discounts === 'string') {
+                            try { discounts = JSON.parse(discounts); } catch(e) {}
+                        }
+                        if (discounts && discounts[this.customerId] !== undefined && discounts[this.customerId] !== null && discounts[this.customerId] !== '') {
+                            return parseFloat(discounts[this.customerId]) || 0;
+                        }
+                    }
+                    return null;
+                },
+                get grossCartonPrice() {
+                    if (this.activeVariation) {
+                        return parseFloat(this.activeVariation.piece_price * this.activeVariation.total_pieces);
+                    }
+                    return parseFloat(this.basePrice);
+                },
+                get basePriceAfterSpecial() {
+                    let base = this.grossCartonPrice;
+                    let spec = this.dealerSpecialDiscountPercentage;
+                    if (spec !== null && spec > 0) {
+                        return base - (base * spec / 100);
+                    }
+                    return base;
+                },
+                get unitPrice() {
+                    let base = this.basePriceAfterSpecial;
+                    let dDisc = this.dealerDiscountPercentage;
+                    if (dDisc > 0) {
+                        return base - (base * dDisc / 100);
+                    }
+                    return base;
+                },
+                get strikethroughPrice() {
+                    return this.basePriceAfterSpecial;
+                },
                 get pieceNetRate() { return (this.unitPrice / this.currentPieces).toFixed(2) },
+                get pieceGrossRate() { return (this.strikethroughPrice / this.currentPieces).toFixed(2) },
                 get total() { return (this.quantity * this.unitPrice).toFixed(2) },
                 get totalPieces() { return (this.quantity * this.currentPieces) },
-                get totalSavings() { return (this.quantity * (this.originalUnitPrice - this.unitPrice)).toFixed(2) },
-                get discountPerPiece() { return ((this.originalUnitPrice - this.unitPrice) / this.currentPieces).toFixed(2) },
                 get canAddToCart() {
-                    if ({{ $product->size ? 'true' : 'false' }} && !this.selectedSize) return false;
-                    if ({{ $product->thickness ? 'true' : 'false' }} && !this.selectedThickness) return false;
-                    if ({{ $product->color ? 'true' : 'false' }} && !this.selectedColor) return false;
+                    if ({{ count($productSizes) > 0 ? 'true' : 'false' }} && !this.selectedSize) return false;
+                    if ({{ count($productThicknesses) > 0 ? 'true' : 'false' }} && !this.selectedThickness) return false;
+                    if ({{ count($productColors) > 0 ? 'true' : 'false' }} && !this.selectedColor) return false;
                     return true;
                 }
             }">
@@ -195,15 +250,27 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
                     <div class="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-slate-200/50">
                         <div>
                             <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Rate (Per PC)</span>
-                            <span class="text-2xl font-black text-slate-900 tracking-tighter">₹<span x-text="pieceNetRate"></span></span>
+                            <div class="flex items-baseline gap-2">
+                                <template x-if="dealerDiscountPercentage > 0">
+                                    <span class="text-base text-slate-400 line-through font-normal">₹<span x-text="pieceGrossRate"></span></span>
+                                </template>
+                                <span class="text-2xl font-black text-slate-900 tracking-tighter">₹<span x-text="pieceNetRate"></span></span>
+                            </div>
                         </div>
                         <div class="text-right">
-                            <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Rate</span>
+                            <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Rate (Per Carton)</span>
                             <div class="flex flex-col items-end">
-                                <span class="text-2xl font-black text-red-600 tracking-tighter">₹{{ number_format($discountedPrice, 2) }}</span>
-                                @if($discountedPrice < $product->price)
-                                    <span class="text-xs line-through text-slate-400 font-bold">₹{{ number_format($product->price, 2) }}</span>
-                                    @endif
+                                <div class="flex items-baseline gap-2">
+                                    <template x-if="dealerDiscountPercentage > 0">
+                                        <span class="text-base text-slate-400 line-through font-normal">₹<span x-text="strikethroughPrice.toFixed(2)"></span></span>
+                                    </template>
+                                    <span class="text-2xl font-black text-red-600 tracking-tighter">₹<span x-text="unitPrice.toFixed(2)"></span></span>
+                                </div>
+                                <template x-if="dealerDiscountPercentage > 0">
+                                    <span class="mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold">
+                                        Dealer Disc: <span x-text="dealerDiscountPercentage"></span>% OFF
+                                    </span>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -231,12 +298,6 @@ $pieceNetRate = $discountedPrice / $piecesPerUnit;
                             <span class="font-black text-slate-900 uppercase tracking-tight">Total Payable</span>
                             <span class="font-black text-red-600 tracking-tighter">₹<span x-text="total"></span></span>
                         </div>
-                        <template x-if="totalSavings > 0">
-                            <div class="flex justify-between items-center pt-2 border-t border-slate-100">
-                                <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Your Savings</span>
-                                <span class="text-sm font-black text-emerald-600">₹<span x-text="totalSavings"></span></span>
-                            </div>
-                        </template>
                     </div>
 
                     <!-- Add to Cart Form -->
