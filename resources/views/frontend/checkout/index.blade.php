@@ -85,6 +85,11 @@
                 </div>
 
                 {{-- Payment Method --}}
+                @php
+                    $isDealer = ($customer->customer_type === 'dealer');
+                    $effectiveDraftDiscount = (float) ($customer->draft_discount ?? 0);
+                    $effectiveOnlineDiscount = (float) ($customer->online_discount > 0 ? $customer->online_discount : ($customer->bank_transfer_discount ?? 0));
+                @endphp
                 <div style="background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem;">
                     <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem;">Payment Method</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -92,15 +97,20 @@
                         <label style="display: flex; align-items: center; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; cursor: pointer;">
                             <input type="radio" name="payment_method" value="cod" {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }} style="margin-right: 1rem;" required>
                             <div>
-                                <span style="display: block; font-weight: 600;">Cash on Delivery</span>
-                                <span style="font-size: 0.75rem; color: #6b7280;">Pay when the order arrives.</span>
+                                <span style="display: block; font-weight: 600;">{{ $isDealer ? 'Draft Payment' : 'Cash on Delivery' }}</span>
+                                <span style="font-size: 0.75rem; color: #6b7280;">{{ $isDealer ? 'Place order as a draft to be verified and settled offline.' : 'Pay when the order arrives.' }}</span>
+                                @if($isDealer && $effectiveDraftDiscount > 0)
+                                    <div style="margin-top: 0.35rem; display: inline-block; padding: 0.25rem 0.6rem; background-color: #fef3c7; border: 1px dashed #f59e0b; border-radius: 0.375rem; color: #92400e; font-size: 0.75rem; font-weight: 700;">
+                                        ⭐ Get {{ $effectiveDraftDiscount }}% extra discount with Draft Payment!
+                                    </div>
+                                @endif
                             </div>
                         </label>
                         @else
                         <label style="display: flex; align-items: center; padding: 1rem; border: 1px solid #f3f4f6; border-radius: 0.5rem; cursor: not-allowed; opacity: 0.6;">
                             <input type="radio" name="payment_method" value="cod" disabled style="margin-right: 1rem;">
                             <div>
-                                <span style="display: block; font-weight: 600; color: #9ca3af;">Cash on Delivery (Locked)</span>
+                                <span style="display: block; font-weight: 600; color: #9ca3af;">{{ $isDealer ? 'Draft Payment (Locked)' : 'Cash on Delivery (Locked)' }}</span>
                                 <span style="font-size: 0.75rem; color: #9ca3af;">As decided by Admin, this option is locked for your account.</span>
                             </div>
                         </label>
@@ -110,15 +120,15 @@
                             <label style="display: flex; align-items: center; padding: 1rem; cursor: pointer; background-color: #f9fafb;">
                                 <input type="radio" name="payment_method" id="bank_transfer_radio" value="bank_transfer" {{ (old('payment_method') === 'bank_transfer' || !$customer->is_cod_allowed) ? 'checked' : '' }} style="margin-right: 1rem;">
                                 <div>
-                                    <span style="display: block; font-weight: 600;">Bank Transfer / Online</span>
+                                    <span style="display: block; font-weight: 600;">{{ $isDealer ? 'Online Payment / Bank Transfer' : 'Bank Transfer / Online' }}</span>
                                     <span style="font-size: 0.75rem; color: #6b7280;">Direct transfer, UPI, or Card payments.</span>
                                 </div>
                             </label>
                             
                             <div id="bank_transfer_options" style="padding: 1rem; border-top: 1px solid #e5e7eb; display: {{ (old('payment_method') === 'bank_transfer' || !$customer->is_cod_allowed) ? 'block' : 'none' }}; background-color: white;">
-                                @if($customer->bank_transfer_discount > 0)
+                                @if($effectiveOnlineDiscount > 0)
                                     <div style="margin-bottom: 1rem; padding: 0.5rem; background-color: #ecfdf5; border: 1px dashed #10b981; border-radius: 0.375rem; color: #065f46; font-size: 0.875rem; font-weight: 600;">
-                                        ⭐ Get {{ $customer->bank_transfer_discount }}% extra discount when you pay via Bank Transfer!
+                                        ⭐ Get {{ $effectiveOnlineDiscount }}% extra discount when you pay Online!
                                     </div>
                                 @endif
                                 
@@ -183,14 +193,19 @@
                                         </div>
                                     @endif
                                 </div>
-                                <span style="font-weight: 600;">₹{{ number_format($lineDisc + $lineGst, 2) }}</span>
+                                <div style="text-align: right;">
+                                    <span style="font-weight: 600;">₹{{ number_format($customer->customer_type === 'dealer' ? $lineDisc : ($lineDisc + $lineGst), 2) }}</span>
+                                    @if($customer->customer_type === 'dealer')
+                                        <div style="font-size: 0.7rem; color: #6b7280;">(+ ₹{{ number_format($lineGst, 2) }} GST)</div>
+                                    @endif
+                                </div>
                             </div>
                         @endforeach
                     </div>
                     
                     <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="color: #6b7280;">Subtotal:</span>
+                            <span style="color: #6b7280;">Subtotal (Gross):</span>
                             <span>₹{{ number_format($subtotal, 2) }}</span>
                         </div>
                         
@@ -199,12 +214,13 @@
                             <span>Dealer Discount:</span>
                             <span>- ₹{{ number_format($totalDealerDiscount, 2) }}</span>
                         </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-top: 0.25rem; border-top: 1px dashed #e5e7eb;">
+                            <span style="color: #374151; font-weight: 600;">Net Subtotal:</span>
+                            <span style="font-weight: 700; color: #111827;">₹{{ number_format($subtotal - $totalDealerDiscount, 2) }}</span>
+                        </div>
                         @endif
                         
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="color: #6b7280;">GST Total:</span>
-                            <span>+ ₹{{ number_format($totalGst, 2) }}</span>
-                        </div>
+                        
                         
                         {{-- B2B Target Discount Details --}}
                         @if($customer->customer_type === 'dealer' && isset($b2bDiscountAmount) && $b2bDiscountAmount > 0)
@@ -226,9 +242,13 @@
                         </div>
                         @endif
                         
-                        <div id="bank_transfer_discount_row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; color: #10b981; font-weight: 600;">
-                            <span>Bank Transfer Discount ({{ $customer->bank_transfer_discount }}%):</span>
-                            <span>- ₹<span id="bt_discount_value">0.00</span></span>
+                        <div id="payment_discount_row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; color: #10b981; font-weight: 600;">
+                            <span id="payment_discount_label">Payment Discount:</span>
+                            <span>- ₹<span id="payment_discount_value">0.00</span></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: #6b7280;">GST Total:</span>
+                            <span>+ ₹{{ number_format($totalGst, 2) }}</span>
                         </div>
                         
                         <div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 2px solid #f3f4f6; margin-top: 1rem;">
@@ -297,32 +317,45 @@
         // Payment Method calculation
         const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
         const bankTransferOptions = document.getElementById('bank_transfer_options');
-        const btDiscountRow = document.getElementById('bank_transfer_discount_row');
-        const btDiscountValue = document.getElementById('bt_discount_value');
+        const paymentDiscountRow = document.getElementById('payment_discount_row');
+        const paymentDiscountLabel = document.getElementById('payment_discount_label');
+        const paymentDiscountValue = document.getElementById('payment_discount_value');
         const grandTotalDisplay = document.getElementById('grand_total_display');
         
         const baseGrandTotal = {{ $total }};
-        const btDiscountPercent = {{ $customer->bank_transfer_discount ?? 0 }};
+        const baseNetSubtotal = {{ $subtotal - $totalDealerDiscount }};
+        const onlineDiscountPercent = {{ $effectiveOnlineDiscount }};
+        const draftDiscountPercent = {{ $effectiveDraftDiscount }};
+        const isDealer = {{ $isDealer ? 'true' : 'false' }};
         
         function updateOrderSummary() {
             const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
             const selectedMethod = checkedRadio ? checkedRadio.value : 'cod';
             
+            let activeDiscountPercent = 0;
+            let discountLabel = '';
+            
             if (selectedMethod === 'bank_transfer') {
                 if(bankTransferOptions) bankTransferOptions.style.display = 'block';
-                
-                if (btDiscountPercent > 0) {
-                    const discount = (baseGrandTotal * btDiscountPercent) / 100;
-                    btDiscountValue.innerText = discount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                    btDiscountRow.style.display = 'flex';
-                    grandTotalDisplay.innerText = (baseGrandTotal - discount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                } else {
-                    btDiscountRow.style.display = 'none';
-                    grandTotalDisplay.innerText = baseGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                }
+                activeDiscountPercent = onlineDiscountPercent;
+                discountLabel = (isDealer ? 'Online Discount' : 'Bank Transfer Discount') + ' (' + onlineDiscountPercent + '%):';
+            } else if (selectedMethod === 'cod') {
+                if(bankTransferOptions) bankTransferOptions.style.display = 'none';
+                activeDiscountPercent = draftDiscountPercent;
+                discountLabel = 'Draft Payment Discount (' + draftDiscountPercent + '%):';
             } else {
                 if(bankTransferOptions) bankTransferOptions.style.display = 'none';
-                btDiscountRow.style.display = 'none';
+            }
+            
+            if (activeDiscountPercent > 0) {
+                // Calculate discount WITHOUT GST (based on Net Subtotal)
+                const discount = (baseNetSubtotal * activeDiscountPercent) / 100;
+                if(paymentDiscountLabel) paymentDiscountLabel.innerText = discountLabel;
+                if(paymentDiscountValue) paymentDiscountValue.innerText = discount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                if(paymentDiscountRow) paymentDiscountRow.style.display = 'flex';
+                grandTotalDisplay.innerText = (baseGrandTotal - discount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } else {
+                if(paymentDiscountRow) paymentDiscountRow.style.display = 'none';
                 grandTotalDisplay.innerText = baseGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             }
         }

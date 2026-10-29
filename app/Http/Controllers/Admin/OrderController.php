@@ -392,6 +392,7 @@ class OrderController extends Controller
             
             // Create Invoice for the remaining items
             if (!empty($invoiceItems)) {
+                $order->load('items');
                 $this->createInvoice($order, $invoiceItems, $request->shipping_fee ?? 0, $request->other_charges ?? 0);
             }
             
@@ -454,11 +455,15 @@ class OrderController extends Controller
         }
         
         $btDiscountAmount = 0;
-        if ($order->is_fully_dispatched && $order->bank_transfer_discount_amount > 0) {
-            $btDiscountAmount = $order->bank_transfer_discount_amount;
+        $onlineDiscountAmount = 0;
+        $draftDiscountAmount = 0;
+        if ($order->is_fully_dispatched) {
+            $onlineDiscountAmount = $order->online_discount_amount > 0 ? $order->online_discount_amount : ($order->bank_transfer_discount_amount ?? 0);
+            $btDiscountAmount = $onlineDiscountAmount;
+            $draftDiscountAmount = $order->draft_discount_amount ?? 0;
         }
 
-        $total = $subtotal + $taxTotal + $manualShipping + $manualOtherCharges - $discountTotal - $btDiscountAmount;
+        $total = $subtotal + $taxTotal + $manualShipping + $manualOtherCharges - $discountTotal - $onlineDiscountAmount - $draftDiscountAmount;
         
         // 2. Create Invoice
         $invoiceCount = $order->invoices()->count() + 1;
@@ -472,6 +477,8 @@ class OrderController extends Controller
             'shipping' => $manualShipping,
             'discount_amount' => $discountTotal,
             'bank_transfer_discount_amount' => $btDiscountAmount,
+            'online_discount_amount' => $onlineDiscountAmount,
+            'draft_discount_amount' => $draftDiscountAmount,
             'other_charges' => $manualOtherCharges,
             'total' => $total,
             'dispatched_at' => now(),

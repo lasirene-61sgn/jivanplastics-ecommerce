@@ -77,10 +77,19 @@ class CustomerController extends Controller
             'is_active' => 'boolean',
             'is_cod_allowed' => 'boolean',
             'bank_transfer_discount' => 'nullable|numeric|min:0|max:100',
+            'online_discount' => 'nullable|numeric|min:0|max:100',
+            'draft_discount' => 'nullable|numeric|min:0|max:100',
         ]);
 
         // Prepare data for creation
         $data = $request->except('password');
+        
+        // Sync online_discount and bank_transfer_discount for consistency
+        if ($request->filled('online_discount')) {
+            $data['bank_transfer_discount'] = $request->online_discount;
+        } elseif ($request->filled('bank_transfer_discount')) {
+            $data['online_discount'] = $request->bank_transfer_discount;
+        }
         
         // Hash password if provided
         if ($request->filled('password')) {
@@ -156,10 +165,19 @@ class CustomerController extends Controller
             'is_active' => 'boolean',
             'is_cod_allowed' => 'boolean',
             'bank_transfer_discount' => 'nullable|numeric|min:0|max:100',
+            'online_discount' => 'nullable|numeric|min:0|max:100',
+            'draft_discount' => 'nullable|numeric|min:0|max:100',
         ]);
 
         // Prepare data for update
         $data = $request->except('password');
+        
+        // Sync online_discount and bank_transfer_discount for consistency
+        if ($request->filled('online_discount')) {
+            $data['bank_transfer_discount'] = $request->online_discount;
+        } elseif ($request->filled('bank_transfer_discount')) {
+            $data['online_discount'] = $request->bank_transfer_discount;
+        }
         
         // Hash password if provided
         if ($request->filled('password')) {
@@ -211,5 +229,48 @@ class CustomerController extends Controller
 
         return redirect()->route('admin.customers.index')
             ->with('success', 'Customer deleted successfully.');
+    }
+
+    /**
+     * Bulk update Draft Payment and Online discounts for dealers.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bulkUpdateDiscounts(Request $request)
+    {
+        $request->validate([
+            'target_scope' => 'required|in:all,selected',
+            'dealer_ids' => 'required_if:target_scope,selected|array',
+            'dealer_ids.*' => 'exists:customers,id',
+            'draft_discount' => 'nullable|numeric|min:0|max:100',
+            'online_discount' => 'nullable|numeric|min:0|max:100',
+            'is_cod_allowed' => 'nullable|in:0,1',
+        ]);
+
+        $query = Customer::dealers();
+        if ($request->target_scope === 'selected' && !empty($request->dealer_ids)) {
+            $query->whereIn('id', $request->dealer_ids);
+        }
+
+        $updates = [];
+        if ($request->filled('draft_discount')) {
+            $updates['draft_discount'] = $request->draft_discount;
+        }
+        if ($request->filled('online_discount')) {
+            $updates['online_discount'] = $request->online_discount;
+            $updates['bank_transfer_discount'] = $request->online_discount;
+        }
+        if ($request->filled('is_cod_allowed')) {
+            $updates['is_cod_allowed'] = (bool) $request->is_cod_allowed;
+        }
+
+        if (empty($updates)) {
+            return redirect()->back()->with('error', 'Please enter at least one discount percentage or setting to update.');
+        }
+
+        $affected = $query->update($updates);
+
+        return redirect()->back()->with('success', "Discounts successfully updated for {$affected} dealer(s).");
     }
 }

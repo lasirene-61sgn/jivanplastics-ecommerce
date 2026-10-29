@@ -72,7 +72,7 @@ class B2BPaymentOptionsTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHas('error', 'Cash on Delivery is not available for your account. Please use Bank Transfer.');
+        $response->assertSessionHas('error', 'Draft Payment is not allowed for your account. Please use Bank Transfer / Online.');
         $this->assertEquals(0, Order::count());
     }
 
@@ -109,8 +109,44 @@ class B2BPaymentOptionsTest extends TestCase
         $this->assertNotNull($order);
         $this->assertEquals('bank_transfer', $order->payment_method);
         $this->assertEquals(59.00, $order->bank_transfer_discount_amount);
+        $this->assertEquals(59.00, $order->online_discount_amount);
         $this->assertEquals(1121.00, $order->total);
         
+        $response->assertRedirect(route('checkout.success', $order));
+    }
+
+    /** @test */
+    public function draft_payment_discount_is_applied_correctly()
+    {
+        $this->actingAs($this->user);
+        $this->dealer->update(['draft_discount' => 5.00]);
+
+        $cart = [
+            $this->product->id => [
+                'name' => $this->product->name,
+                'quantity' => 1,
+                'price' => 1000.00,
+            ]
+        ];
+        session(['cart' => $cart]);
+
+        $response = $this->post(route('checkout.process'), [
+            'billing_address' => '123 Test St',
+            'billing_city' => 'Test City',
+            'billing_state' => 'Test State',
+            'billing_zip' => '12345',
+            'billing_country' => 'India',
+            'use_same_address' => 1,
+            'payment_method' => 'cod',
+        ]);
+
+        $order = Order::latest()->first();
+        $this->assertNotNull($order);
+        $this->assertEquals('cod', $order->payment_method);
+        $this->assertEquals(59.00, $order->draft_discount_amount);
+        $this->assertEquals(0.00, $order->online_discount_amount);
+        $this->assertEquals(1121.00, $order->total);
+
         $response->assertRedirect(route('checkout.success', $order));
     }
 }

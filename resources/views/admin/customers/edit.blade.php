@@ -81,17 +81,30 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
                     <div class="space-y-2">
-                        <label for="is_cod_allowed" class="text-sm font-bold text-slate-700 uppercase tracking-wider">COD Allowed</label>
+                        <label for="is_cod_allowed" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Draft Payment Allowed</label>
                         <select name="is_cod_allowed" id="is_cod_allowed" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none bg-white font-semibold cursor-pointer">
-                            <option value="1" {{ (old('is_cod_allowed', $customer->is_cod_allowed) == 1) ? 'selected' : '' }}>Yes</option>
-                            <option value="0" {{ (old('is_cod_allowed', $customer->is_cod_allowed) == 0) ? 'selected' : '' }}>No (Bank Transfer Only)</option>
+                            <option value="1" {{ (old('is_cod_allowed', $customer->is_cod_allowed) == 1) ? 'selected' : '' }}>Yes (Allowed)</option>
+                            <option value="0" {{ (old('is_cod_allowed', $customer->is_cod_allowed) == 0) ? 'selected' : '' }}>No (Locked)</option>
                         </select>
+                        <p class="text-[11px] text-slate-400">Enable/disable draft orders for this dealer.</p>
                     </div>
                     <div class="space-y-2">
-                        <label for="bank_transfer_discount" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Bank Transfer Discount (%)</label>
-                        <input type="number" step="0.01" id="bank_transfer_discount" name="bank_transfer_discount" value="{{ old('bank_transfer_discount', $customer->bank_transfer_discount) }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" placeholder="0.00">
+                        <label for="draft_discount" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Draft Payment Disc (%)</label>
+                        <div class="relative">
+                            <input type="number" step="0.01" min="0" max="100" id="draft_discount" name="draft_discount" value="{{ old('draft_discount', $customer->draft_discount ?? '0.00') }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none pr-10 font-bold text-amber-600" placeholder="0.00">
+                            <span class="absolute right-4 top-3.5 text-sm font-bold text-slate-400">%</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Discount when dealer pays via Draft Payment.</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="online_discount" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Online Discount (%)</label>
+                        <div class="relative">
+                            <input type="number" step="0.01" min="0" max="100" id="online_discount" name="online_discount" value="{{ old('online_discount', $customer->online_discount > 0 ? $customer->online_discount : ($customer->bank_transfer_discount ?? '0.00')) }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none pr-10 font-bold text-indigo-600" placeholder="0.00">
+                            <span class="absolute right-4 top-3.5 text-sm font-bold text-slate-400">%</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Discount when dealer pays via Online/Bank.</p>
                     </div>
                 </div>
             </div>

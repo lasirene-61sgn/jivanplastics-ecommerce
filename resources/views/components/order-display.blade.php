@@ -224,16 +224,46 @@
                         }
                     }
                 @endphp
-                @if($order->customer_type === 'dealer' && $order->discount_amount > 0)
-                <p style="margin: 0.25rem 0; color: #059669; font-size: 0.875rem;">
-                    <strong>Dealer Discount:</strong> -₹{{ number_format($order->discount_amount, 2) }}
-                </p>
-                @endif
+            @php
+                $grossSubtotal = $order->original_subtotal ?? $order->subtotal;
+                $dealerDiscount = $order->discount_amount ?? 0;
+                $netSubtotal = $grossSubtotal - $dealerDiscount;
+                $paymentDiscount = ($order->draft_discount_amount > 0) ? $order->draft_discount_amount : (($order->online_discount_amount > 0) ? $order->online_discount_amount : ($order->bank_transfer_discount_amount ?? 0));
+            @endphp
+            @if($order->customer_type === 'dealer' && $dealerDiscount > 0)
+                <div style="margin: 0.5rem 0; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; border: 1px solid #e2e8f0; font-size: 0.8125rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px; color: #64748b;">
+                        <span>Subtotal (Gross):</span>
+                        <span>₹{{ number_format($grossSubtotal, 2) }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px; color: #059669; font-weight: 700;">
+                        <span>Dealer Discount:</span>
+                        <span>-₹{{ number_format($dealerDiscount, 2) }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px; color: #334155; font-weight: 700; border-top: 1px dashed #cbd5e1; padding-top: 2px;">
+                        <span>Net Subtotal:</span>
+                        <span>₹{{ number_format($netSubtotal, 2) }}</span>
+                    </div>
+                    @if($order->tax > 0)
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px; color: #64748b;">
+                        <span>GST Total:</span>
+                        <span>+₹{{ number_format($order->tax, 2) }}</span>
+                    </div>
+                    @endif
+                    @if($paymentDiscount > 0)
+                    <div style="display: flex; justify-content: space-between; color: {{ $order->draft_discount_amount > 0 ? '#d97706' : '#059669' }}; font-weight: 700;">
+                        <span>{{ $order->draft_discount_amount > 0 ? 'Draft Payment Disc:' : 'Online Discount:' }}</span>
+                        <span>-₹{{ number_format($paymentDiscount, 2) }}</span>
+                    </div>
+                    @endif
+                </div>
+            @endif
+            <p style="margin: 0.25rem 0; font-size: 1rem; font-weight: 800; color: #1f2937;">
                 <strong>Total Amount:</strong> 
                 @if($rejectedRefund > 0)
                     <span style="text-decoration: line-through; margin-right: 4px; font-size: 0.8em; color: #9ca3af;">₹{{ number_format($order->total, 2) }}</span>
                 @endif
-                ₹{{ number_format($order->total - $rejectedRefund, 2) }}
+                <span style="color: #8B0000;">₹{{ number_format($order->total - $rejectedRefund, 2) }}</span>
             </p>
         </div>
         <div>

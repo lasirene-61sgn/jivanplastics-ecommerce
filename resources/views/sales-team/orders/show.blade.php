@@ -46,10 +46,20 @@
                 </div>
                 <div class="flex justify-between border-b border-slate-50 pb-3">
                     <span class="text-sm font-bold text-slate-400 uppercase tracking-tighter">Settlement</span>
-                    <span class="text-sm font-black text-indigo-600 uppercase">{{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}</span>
+                    <span class="text-sm font-black text-indigo-600 uppercase">{{ ($order->payment_method === 'cod' && $order->customer_type === 'dealer') ? 'Draft Payment' : ucfirst(str_replace('_', ' ', $order->payment_method)) }}</span>
                 </div>
                 
                 <div class="pt-4 space-y-2">
+                    @if($order->customer_type === 'dealer' && $order->discount_amount > 0)
+                    <div class="flex justify-between text-xs font-bold text-slate-500">
+                        <span>Subtotal (Gross):</span>
+                        <span>₹{{ number_format($order->original_subtotal ?? $order->subtotal, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between text-xs font-bold text-rose-600">
+                        <span>Dealer Discount:</span>
+                        <span>-₹{{ number_format($order->discount_amount, 2) }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between text-xs font-bold text-slate-500">
                         <span>Net Subtotal:</span>
                         <span>₹{{ number_format($order->subtotal, 2) }}</span>
@@ -62,6 +72,18 @@
                         <span>Logistics Cost:</span>
                         <span>₹{{ number_format($order->shipping, 2) }}</span>
                     </div>
+                    @if($order->online_discount_amount > 0 || $order->bank_transfer_discount_amount > 0)
+                    <div class="flex justify-between text-xs font-bold text-emerald-600">
+                        <span>Online Discount:</span>
+                        <span>-₹{{ number_format($order->online_discount_amount > 0 ? $order->online_discount_amount : $order->bank_transfer_discount_amount, 2) }}</span>
+                    </div>
+                    @endif
+                    @if($order->draft_discount_amount > 0)
+                    <div class="flex justify-between text-xs font-bold text-amber-600">
+                        <span>Draft Payment Disc:</span>
+                        <span>-₹{{ number_format($order->draft_discount_amount, 2) }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between items-end pt-4 border-t border-slate-100">
                         <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Grand Total Value</span>
                         <span class="text-2xl font-black text-slate-900 tracking-tighter italic">₹{{ number_format($order->total, 2) }}</span>

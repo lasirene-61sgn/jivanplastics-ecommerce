@@ -141,12 +141,14 @@ class CheckoutController extends Controller
         }
 
         $shipping = 0;
-        $total = ($subtotal - $totalDealerDiscount) + $totalGst - $b2bDiscountAmount;
+        $netSubtotal = $subtotal - $totalDealerDiscount;
+        $total = $netSubtotal + $totalGst - $b2bDiscountAmount;
 
         return view('frontend.checkout.index', compact(
             'cart',
             'customer',
             'subtotal',
+            'netSubtotal',
             'totalDealerDiscount',
             'totalGst',
             'shipping',
@@ -199,7 +201,8 @@ class CheckoutController extends Controller
         }
 
         if ($request->payment_method === 'cod' && !$customer->is_cod_allowed) {
-            return redirect()->back()->with('error', 'Cash on Delivery is not allowed for your account. Please use Bank Transfer.');
+            $paymentLabel = ($customer->customer_type === 'dealer') ? 'Draft Payment' : 'Cash on Delivery';
+            return redirect()->back()->with('error', $paymentLabel . ' is not allowed for your account. Please use Bank Transfer / Online.');
         }
 
         $subtotal = 0;
@@ -241,7 +244,7 @@ class CheckoutController extends Controller
 
             if ($product) {
                 $gstInclusiveOriginal = $variation ? $variation->total_price : $product->price;
-                $gstPct = $variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0);
+                $gstPct = $item['gst_percentage'] ?? ($variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0));
                 $originalBasePrice = $gstInclusiveOriginal / (1 + ($gstPct / 100));
 
                 $isPieces = isset($item['is_pieces']) && $item['is_pieces'];
@@ -303,10 +306,19 @@ class CheckoutController extends Controller
         $shipping = 0;
         $total = $subtotal + $shipping + $totalGst - $b2bDiscountAmount;
 
-        $btDiscountAmount = 0;
-        if ($request->payment_method === 'bank_transfer' && $customer->bank_transfer_discount > 0) {
-            $btDiscountAmount = ($total * $customer->bank_transfer_discount) / 100;
-            $total -= $btDiscountAmount;
+        $onlineDiscountPercent = (float) ($customer->online_discount > 0 ? $customer->online_discount : ($customer->bank_transfer_discount ?? 0));
+        $draftDiscountPercent = (float) ($customer->draft_discount ?? 0);
+
+        $onlineDiscountAmount = 0;
+        $draftDiscountAmount = 0;
+
+        // Calculate Payment Discounts on Net Subtotal (WITHOUT GST)
+        if ($request->payment_method === 'bank_transfer' && $onlineDiscountPercent > 0) {
+            $onlineDiscountAmount = ($subtotal * $onlineDiscountPercent) / 100;
+            $total -= $onlineDiscountAmount;
+        } elseif ($request->payment_method === 'cod' && $draftDiscountPercent > 0) {
+            $draftDiscountAmount = ($subtotal * $draftDiscountPercent) / 100;
+            $total -= $draftDiscountAmount;
         }
 
         $originalSubtotal = array_reduce($items, function($carry, $item) {
@@ -341,7 +353,9 @@ class CheckoutController extends Controller
             'shipping_zip' => $useSameAddress ? $request->billing_zip : $request->shipping_zip,
             'shipping_country' => $useSameAddress ? $request->billing_country : $request->shipping_country,
             'b2b_discount_amount' => $b2bDiscountAmount,
-            'bank_transfer_discount_amount' => $btDiscountAmount,
+            'bank_transfer_discount_amount' => $onlineDiscountAmount,
+            'online_discount_amount' => $onlineDiscountAmount,
+            'draft_discount_amount' => $draftDiscountAmount,
         ]);
 
         foreach ($items as $item) {

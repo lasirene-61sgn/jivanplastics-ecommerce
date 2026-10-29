@@ -138,8 +138,13 @@
                                 </form>
                             </td>
                             <td style="padding: 1rem; text-align: right; font-weight: 700; color: #1f2937;">
-                                ₹{{ number_format($itemFinalTotal, 2) }}
-                                <div style="font-size: 0.7rem; color: #6b7280; font-weight: normal;">(Incl. ₹{{ number_format($itemGst, 2) }} GST)</div>
+                                @if($isB2B)
+                                    ₹{{ number_format($itemDiscountedTotal, 2) }}
+                                    <div style="font-size: 0.7rem; color: #6b7280; font-weight: normal;">(+ ₹{{ number_format($itemGst, 2) }} GST)</div>
+                                @else
+                                    ₹{{ number_format($itemFinalTotal, 2) }}
+                                    <div style="font-size: 0.7rem; color: #6b7280; font-weight: normal;">(Incl. ₹{{ number_format($itemGst, 2) }} GST)</div>
+                                @endif
                             </td>
                             <td style="padding: 1rem; text-align: center;">
                                 <form action="{{ route('cart.remove', $cartKey) }}" method="POST" onsubmit="return confirm('Remove this product?')">
@@ -170,6 +175,11 @@
                         <span style="font-weight: 600;">- ₹{{ number_format($totalDiscount, 2) }}</span>
                     </div>
                     @endif
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e5e7eb;">
+                        <span style="color: #374151; font-weight: 600;">Net Subtotal:</span>
+                        <span style="font-weight: 700; color: #1f2937;">₹{{ number_format($subtotal - $totalDiscount, 2) }}</span>
+                    </div>
                     
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
                         <span style="color: #6b7280;">GST Total:</span>

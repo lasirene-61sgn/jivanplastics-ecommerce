@@ -33,6 +33,8 @@ class Customer extends Authenticatable
         'loyalty_points',
         'is_cod_allowed',
         'bank_transfer_discount',
+        'online_discount',
+        'draft_discount',
     ];
 
     /**
@@ -55,8 +57,18 @@ class Customer extends Authenticatable
         'loyalty_points' => 'integer',
         'is_cod_allowed' => 'boolean',
         'bank_transfer_discount' => 'decimal:2',
+        'online_discount' => 'decimal:2',
+        'draft_discount' => 'decimal:2',
         'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * Get the effective online discount percentage.
+     */
+    public function getEffectiveOnlineDiscountAttribute(): float
+    {
+        return (float) ($this->online_discount > 0 ? $this->online_discount : ($this->bank_transfer_discount ?? 0));
+    }
 
     /**
      * Get the customer's full address.

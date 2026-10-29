@@ -61,7 +61,7 @@
                     </div>
                     <div class="flex justify-between border-b border-slate-50 pb-3 italic">
                         <span class="text-sm font-bold text-slate-500">Payment:</span>
-                        <span class="text-sm font-black text-slate-900 uppercase tracking-tighter">{{ $order->payment_method }}</span>
+                        <span class="text-sm font-black text-slate-900 uppercase tracking-tighter">{{ ($order->payment_method === 'cod' && $order->customer_type === 'dealer') ? 'Draft Payment' : str_replace('_', ' ', $order->payment_method) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm font-bold text-slate-500">Current Status:</span>
@@ -217,22 +217,42 @@
                     <span>Subtotal (Gross):</span>
                     <span class="text-slate-900 italic">₹{{ number_format($order->original_subtotal ?? $order->subtotal, 2) }}</span>
                 </div>
-                <div class="flex justify-between text-sm font-bold text-slate-500">
-                    <span>Tax Aggregation:</span>
-                    <span class="text-slate-900 italic">₹{{ number_format($order->tax, 2) }}</span>
-                </div>
                 @if($order->customer_type === 'dealer' && $order->discount_amount > 0)
-                <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
+                <div class="flex justify-between text-sm font-bold text-slate-500">
                     <span>Dealer Discount:</span>
                     <span class="text-rose-600 italic">-₹{{ number_format($order->discount_amount ?? 0, 2) }}</span>
                 </div>
+                <div class="flex justify-between text-sm font-bold text-slate-500 border-t border-dashed border-slate-100 pt-2">
+                    <span>Net Subtotal:</span>
+                    <span class="text-slate-900 font-extrabold italic">₹{{ number_format(($order->original_subtotal ?? $order->subtotal) - $order->discount_amount, 2) }}</span>
+                </div>
                 @endif
+               
                 @if($order->b2b_discount_amount > 0)
                 <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
                     <span>B2B Extra Discount (2%):</span>
                     <span class="text-indigo-600 italic">-₹{{ number_format($order->b2b_discount_amount ?? 0, 2) }}</span>
                 </div>
                 @endif
+                @php
+                $onlineDisc = $order->online_discount_amount > 0 ? $order->online_discount_amount : $order->bank_transfer_discount_amount;
+                @endphp
+                @if($onlineDisc > 0)
+                <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
+                    <span>{{ $order->customer_type === 'dealer' ? 'Online Discount:' : 'Bank Transfer Discount:' }}</span>
+                    <span class="text-emerald-600 italic">-₹{{ number_format($onlineDisc, 2) }}</span>
+                </div>
+                @endif
+                @if(isset($order->draft_discount_amount) && $order->draft_discount_amount > 0)
+                <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
+                    <span>Draft Payment Discount:</span>
+                    <span class="text-amber-600 italic">-₹{{ number_format($order->draft_discount_amount, 2) }}</span>
+                </div>
+                @endif
+                 <div class="flex justify-between text-sm font-bold text-slate-500">
+                    <span>Tax Aggregation:</span>
+                    <span class="text-slate-900 italic">₹{{ number_format($order->tax, 2) }}</span>
+                </div>
                 <div class="flex justify-between text-sm font-bold text-slate-500 border-b border-slate-50 pb-3">
                     <span>Logistics:</span>
                     <span class="text-slate-900 italic">₹{{ number_format($order->shipping, 2) }}</span>

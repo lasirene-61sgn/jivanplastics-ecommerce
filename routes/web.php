@@ -119,6 +119,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth:admin')->group(function () {
         // Customer type specific routes (must be before resource route)
         Route::get('/customers/dealers', [CustomerController::class, 'dealers'])->name('customers.dealers');
+        Route::post('/customers/dealers/bulk-discounts', [CustomerController::class, 'bulkUpdateDiscounts'])->name('customers.dealers.bulk-discounts');
         Route::get('/customers/individuals', [CustomerController::class, 'individuals'])->name('customers.individuals');
         
         // Order management routes

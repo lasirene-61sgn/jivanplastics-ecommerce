@@ -74,7 +74,34 @@
                     </div>
                     <div class="space-y-2">
                         <label for="gst_number" class="text-sm font-bold text-slate-700 uppercase tracking-wider">GST Identification Number <span class="text-red-500 ml-1">*</span></label>
-                        <input type="text" id="gst_number" name="gst_number" value="{{ old('gst_number') }}" placeholder="22AAAAA0000A1Z5" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" required>
+                        <input type="text" id="gst_number" name="gst_number" value="{{ old('gst_number') }}" placeholder="22AAAAA0000A1Z5" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                    <div class="space-y-2">
+                        <label for="is_cod_allowed" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Draft Payment Allowed</label>
+                        <select name="is_cod_allowed" id="is_cod_allowed" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none bg-white font-semibold cursor-pointer">
+                            <option value="1" {{ old('is_cod_allowed', '1') == '1' ? 'selected' : '' }}>Yes (Allowed)</option>
+                            <option value="0" {{ old('is_cod_allowed') == '0' ? 'selected' : '' }}>No (Locked)</option>
+                        </select>
+                        <p class="text-[11px] text-slate-400">Enable/disable draft orders for this dealer.</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="draft_discount" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Draft Payment Disc (%)</label>
+                        <div class="relative">
+                            <input type="number" step="0.01" min="0" max="100" id="draft_discount" name="draft_discount" value="{{ old('draft_discount', '0.00') }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none pr-10 font-bold text-amber-600" placeholder="0.00">
+                            <span class="absolute right-4 top-3.5 text-sm font-bold text-slate-400">%</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Discount when dealer pays via Draft Payment.</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="online_discount" class="text-sm font-bold text-slate-700 uppercase tracking-wider">Online Discount (%)</label>
+                        <div class="relative">
+                            <input type="number" step="0.01" min="0" max="100" id="online_discount" name="online_discount" value="{{ old('online_discount', '0.00') }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none pr-10 font-bold text-indigo-600" placeholder="0.00">
+                            <span class="absolute right-4 top-3.5 text-sm font-bold text-slate-400">%</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Discount when dealer pays via Online/Bank.</p>
                     </div>
                 </div>
             </div>

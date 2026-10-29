@@ -165,7 +165,11 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
                     <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Method</span>
                     <span class="text-xs font-black text-slate-900 uppercase">
                         @if($displayOrder)
-                        {{ str_replace('_', ' ', $displayOrder->payment_method) }}
+                            @if($displayOrder->payment_method === 'cod' && $displayOrder->customer_type === 'dealer')
+                                DRAFT PAYMENT
+                            @else
+                                {{ str_replace('_', ' ', $displayOrder->payment_method) }}
+                            @endif
                         @else
                         REWARD
                         @endif
@@ -447,14 +451,16 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
             });
             $finalShipping = $displayOrder ? $displayOrder->shipping : 0;
             $finalOtherCharges = $displayOrder ? $displayOrder->other_charges : 0;
-            $finalBTDiscount = $displayOrder ? $displayOrder->bank_transfer_discount_amount : 0;
+            $finalBTDiscount = $displayOrder ? ($displayOrder->online_discount_amount > 0 ? $displayOrder->online_discount_amount : $displayOrder->bank_transfer_discount_amount) : 0;
+            $finalDraftDiscount = $displayOrder ? ($displayOrder->draft_discount_amount ?? 0) : 0;
             $finalB2BDiscount = $displayOrder ? $displayOrder->b2b_discount_amount : 0;
 
-            $finalTotal = ($finalSubtotal - $finalDiscount) + $finalTax + $finalShipping + $finalOtherCharges - $finalBTDiscount - $finalB2BDiscount;
+            $finalTotal = ($finalSubtotal - $finalDiscount) + $finalTax + $finalShipping + $finalOtherCharges - $finalBTDiscount - $finalDraftDiscount - $finalB2BDiscount;
             }
 
             if (isset($invoice)) {
-            $finalBTDiscount = $invoice->bank_transfer_discount_amount ?? ($displayOrder ? $displayOrder->bank_transfer_discount_amount : 0);
+            $finalBTDiscount = $invoice->online_discount_amount ?? $invoice->bank_transfer_discount_amount ?? ($displayOrder ? ($displayOrder->online_discount_amount > 0 ? $displayOrder->online_discount_amount : $displayOrder->bank_transfer_discount_amount) : 0);
+            $finalDraftDiscount = $invoice->draft_discount_amount ?? ($displayOrder ? ($displayOrder->draft_discount_amount ?? 0) : 0);
             $finalB2BDiscount = $invoice->b2b_discount_amount ?? ($displayOrder ? $displayOrder->b2b_discount_amount : 0);
 
             // Adjust the final total to reflect the B2B discount since it wasn't saved in the invoice table
@@ -476,6 +482,10 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
                 <span class="font-black text-emerald-600 uppercase tracking-widest text-[10px]">B2B Dealer Discount</span>
                 <span class="font-black text-emerald-600 italic">-₹{{ number_format($finalDiscount, 2) }}</span>
             </div>
+            <div class="flex justify-between items-center text-sm pb-1 border-b border-slate-100">
+                <span class="font-bold text-slate-500 uppercase tracking-widest text-[10px]">Net Subtotal</span>
+                <span class="font-bold text-slate-800 italic">₹{{ number_format($finalSubtotal - $finalDiscount, 2) }}</span>
+            </div>
             @endif
 
             @if(isset($finalB2BDiscount) && $finalB2BDiscount > 0)
@@ -487,8 +497,15 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
 
             @if(isset($finalBTDiscount) && $finalBTDiscount > 0)
             <div class="flex justify-between items-center text-sm">
-                <span class="font-black text-emerald-600 uppercase tracking-widest text-[10px]">Bank Transfer Discount</span>
+                <span class="font-black text-emerald-600 uppercase tracking-widest text-[10px]">{{ ($displayOrder && $displayOrder->customer_type === 'dealer') ? 'Online Discount' : 'Bank Transfer Discount' }}</span>
                 <span class="font-black text-emerald-600 italic">-₹{{ number_format($finalBTDiscount, 2) }}</span>
+            </div>
+            @endif
+
+            @if(isset($finalDraftDiscount) && $finalDraftDiscount > 0)
+            <div class="flex justify-between items-center text-sm">
+                <span class="font-black text-amber-600 uppercase tracking-widest text-[10px]">Draft Payment Discount</span>
+                <span class="font-black text-amber-600 italic">-₹{{ number_format($finalDraftDiscount, 2) }}</span>
             </div>
             @endif
 
