@@ -384,7 +384,7 @@
         </div>
         
         <div class="card">
-            <h3 class="card-title">Order Items</h3>
+            <h3 class="card-title">Allocated Order Items <span style="font-size: 12px; color: #059669; font-weight: normal; margin-left: 8px;">(Only Admin-Accepted Items Allocated)</span></h3>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
@@ -398,7 +398,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($order->items as $item)
+                        @foreach($order->items->where('status', 'accepted') as $item)
                             <tr>
                                 <td>
                                     <strong>{{ $item->product_name }}</strong>
@@ -465,7 +465,7 @@
                     @method('PUT')
                     <div class="form-group">
                         <label style="font-weight: 600; margin-bottom: 12px; display: block;">How many pieces have been processed now?</label>
-                        @foreach($order->items as $item)
+                        @foreach($order->items->where('status', 'accepted') as $item)
                         @if($item->has_manufacturing_pending)
                             @php
                                 $perUnit = max($item->per_unit_pieces ?? 1, 1);
@@ -574,7 +574,7 @@
                         <input type="text" name="correction_reason" class="form-control" placeholder="Briefly explain what you are correcting..." required style="border-color: #dc3545;">
                     </div>
 
-                    @foreach($order->items as $item)
+                    @foreach($order->items->where('status', 'accepted') as $item)
                     @php
                         $perUnitCorr = max($item->per_unit_pieces ?? 1, 1);
                     @endphp
@@ -698,7 +698,7 @@
                 <div class="form-group">
                     <label for="manufacturing_status" class="form-label">Select New Status</label>
                     @php
-                        $hasPendingManufacturing = $order->items->sum('manufacturing_pending_pieces') > 0;
+                        $hasPendingManufacturing = $order->items->where('status', 'accepted')->sum('manufacturing_pending_pieces') > 0;
                     @endphp
                     <select name="manufacturing_status" id="manufacturing_status" class="form-control" required>
                         <option value="">Select status</option>

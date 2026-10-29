@@ -87,7 +87,9 @@ class DashboardController extends Controller
             abort(403, 'Unauthorized access to this order.');
         }
         
-        $order->load('items.product', 'customer');
+        $order->load(['customer']);
+        // Only accepted items are allocated to go to the manufacturing team
+        $order->setRelation('items', $order->items()->where('status', 'accepted')->with('product')->get());
         
         return view('manufacturing-team.orders.show', compact('order'));
     }
@@ -109,9 +111,9 @@ class DashboardController extends Controller
             'tentative_dispatch_date' => 'nullable|date|after_or_equal:today',
         ]);
         
-        // Validation: Prevent marking as completed if items are still pending
+        // Validation: Prevent marking as completed if items are still pending (only accepted items allocated)
         if ($request->manufacturing_status === 'completed') {
-            $pendingQuantity = $order->items->sum(function($item) {
+            $pendingQuantity = $order->items()->where('status', 'accepted')->get()->sum(function($item) {
                 return $item->manufacturing_pending_quantity;
             });
             
@@ -195,6 +197,7 @@ class DashboardController extends Controller
             foreach ($request->completed_pieces as $itemId => $completedPieces) {
                 $orderItem = OrderItem::where('id', $itemId)
                     ->where('order_id', $order->id)
+                    ->where('status', 'accepted')
                     ->lockForUpdate()
                     ->first();
                     
@@ -252,7 +255,7 @@ class DashboardController extends Controller
             // Check if everything is manufactured/rejected (using pieces since we are tracking pieces now)
             // Re-fetch items to get the updated values
             $order->refresh();
-            $stillPendingPieces = $order->items->sum(function($item) {
+            $stillPendingPieces = $order->items()->where('status', 'accepted')->get()->sum(function($item) {
                 return $item->manufacturing_pending_pieces;
             });
 
@@ -348,8 +351,8 @@ class DashboardController extends Controller
                     $updateData['status'] = 'under_process';
                     break;
                 case 'completed':
-                    // Check pending quantity for this order
-                    $pendingQuantity = $order->items->sum(function($item) {
+                    // Check pending quantity for this order (only accepted items allocated)
+                    $pendingQuantity = $order->items()->where('status', 'accepted')->get()->sum(function($item) {
                         return $item->manufacturing_pending_quantity;
                     });
                     
@@ -443,6 +446,7 @@ class DashboardController extends Controller
         foreach ($request->corrected_manufactured_pieces as $itemId => $manufacturedPieces) {
             $orderItem = OrderItem::where('id', $itemId)
                 ->where('order_id', $order->id)
+                ->where('status', 'accepted')
                 ->first();
 
             if (!$orderItem || $orderItem->per_unit_pieces <= 0) {

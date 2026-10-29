@@ -139,7 +139,7 @@ class ManufacturingTeamApiController extends Controller
         $manufacturingTeam = $request->user();
 
         $orders = Order::where('manufacturing_team_id', $manufacturingTeam->id)
-            ->with(['customer', 'items.product'])
+            ->with(['customer', 'items' => function($q) { $q->where('status', 'accepted'); }, 'items.product'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
@@ -161,7 +161,7 @@ class ManufacturingTeamApiController extends Controller
 
         $order = Order::where('manufacturing_team_id', $manufacturingTeam->id)
             ->where('id', $orderId)
-            ->with(['customer', 'items.product'])
+            ->with(['customer', 'items' => function($q) { $q->where('status', 'accepted'); }, 'items.product'])
             ->first();
 
         if (!$order) {

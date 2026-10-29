@@ -32,6 +32,7 @@ class OrderItem extends Model
         'size',
         'thickness',
         'color',
+        'status',
     ];
 
     /**
@@ -141,5 +142,20 @@ class OrderItem extends Model
     public function productionLogs()
     {
         return $this->hasMany(OrderProductionLog::class, 'order_item_id');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isAccepted(): bool
+    {
+        return $this->status === 'accepted';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
     }
 }

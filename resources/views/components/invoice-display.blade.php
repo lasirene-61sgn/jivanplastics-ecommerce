@@ -187,7 +187,7 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
                     <tr class="bg-slate-50/80 border-b border-slate-200">
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Product Description</th>
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">Price / Rate</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">@if($displayOrder && $displayOrder->customer_type === 'dealer') Units / Pcs @else Pieces @endif</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">@if($displayOrder && $displayOrder->customer_type === 'dealer') Quantity (Units / Pcs) @else Quantity / Pieces @endif</th>
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">GST / Tax</th>
                         <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right whitespace-nowrap">Line Total</th>
                     </tr>
@@ -215,94 +215,94 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
                     @php
                     // Handle both InvoiceItem and OrderItem
                     if (isset($invoice)) {
-                    $orderItem = $item->orderItem;
-                    $isDealer = $displayOrder && $displayOrder->customer_type === 'dealer';
+                        $orderItem = $item->orderItem;
+                        $isDealer = $displayOrder && $displayOrder->customer_type === 'dealer';
 
-                    if ($isDealer && $orderItem && $orderItem->per_unit_pieces > 0) {
-                    $displayQuantity = round($item->quantity * $orderItem->per_unit_pieces);
-                    $unitPrice = (!empty($orderItem->piece_price) && $orderItem->piece_price > 0) ? $orderItem->piece_price : ($orderItem->original_price ? ($orderItem->original_price / $orderItem->per_unit_pieces) : ($item->unit_price / $orderItem->per_unit_pieces));
-                    $unitDiscount = ($displayQuantity > 0) ? ($item->discount_amount / $displayQuantity) : 0;
+                        if ($orderItem) {
+                            $product = $orderItem->product;
+                            $productName = $orderItem->product_name;
+                            $productId = $orderItem->product_id;
+                        } else {
+                            $rewardClaim = $invoice->rewardClaim;
+                            $product = ($rewardClaim && $rewardClaim->reward) ? $rewardClaim->reward->product : null;
+                            $productName = ($rewardClaim && $rewardClaim->reward) ? $rewardClaim->reward->name : 'Reward Item';
+                            $productId = $product ? $product->id : 'N/A';
+                        }
+
+                        $displayUnits = round($item->quantity, 2);
+                        if ($isDealer && $orderItem && $orderItem->per_unit_pieces > 0) {
+                            $displayQuantity = round($item->quantity * $orderItem->per_unit_pieces);
+                        } else {
+                            $displayQuantity = round($item->quantity, 2);
+                        }
+
+                        // Totals from invoice item
+                        $lineGrossTotal = $item->unit_price * $item->quantity;
+                        $lineDiscountTotal = $item->discount_amount ?? 0;
+                        $lineTaxableAmount = $lineGrossTotal - $lineDiscountTotal;
+                        $itemGst = $item->tax_amount ?? 0;
+                        $lineTotal = $item->total;
+
+                        // Rates per piece
+                        if ($isDealer && $orderItem && $orderItem->per_unit_pieces > 0) {
+                            $unitPrice = (!empty($orderItem->piece_price) && $orderItem->piece_price > 0) 
+                                ? $orderItem->piece_price 
+                                : ($lineGrossTotal / max($displayQuantity, 1));
+                            $unitDiscount = ($displayQuantity > 0) ? ($lineDiscountTotal / $displayQuantity) : 0;
+                        } else {
+                            $fallbackPrice = $product ? ($product->per_quantity_pieces > 1 ? ($product->price / $product->per_quantity_pieces) : $product->price) : $item->unit_price;
+                            $unitPrice = $orderItem ? ($orderItem->original_price ?? $fallbackPrice) : $item->unit_price;
+                            $unitDiscount = ($displayQuantity > 0) ? ($lineDiscountTotal / $displayQuantity) : 0;
+                        }
+
+                        // GST Rate
+                        if ($orderItem && $orderItem->product && $orderItem->product->gst_percentage > 0) {
+                            $displayGstRate = $orderItem->product->gst_percentage;
+                        } elseif ($lineTaxableAmount > 0 && $itemGst > 0) {
+                            $displayGstRate = round(($itemGst / $lineTaxableAmount) * 100, 1);
+                        } else {
+                            $displayGstRate = 18.0;
+                        }
                     } else {
-                    $displayQuantity = round($item->quantity, 2);
+                        $orderItem = $item;
+                        $product = $orderItem->product;
+                        $productName = $orderItem->product_name;
+                        $productId = $orderItem->product_id;
+                        $isDealer = $displayOrder && $displayOrder->customer_type === 'dealer';
 
-                    $fallbackPrice = $product ? ($product->per_quantity_pieces > 1 ? ($product->price / $product->per_quantity_pieces) : $product->price) : $item->unit_price;
-                    $unitPrice = $orderItem ? ($orderItem->original_price ?? $fallbackPrice) : $item->unit_price;
+                        $displayUnits = round($item->dispatched_quantity, 2);
+                        if ($isDealer && $item->per_unit_pieces > 0) {
+                            $displayQuantity = round($item->dispatched_quantity * $item->per_unit_pieces);
+                        } else {
+                            $displayQuantity = round($item->dispatched_quantity, 2);
+                        }
 
-                    if ($orderItem && $orderItem->per_unit_pieces == 1 && $product && $product->per_quantity_pieces > 1) {
-                    if ($unitPrice >= $orderItem->price * $product->per_quantity_pieces * 0.9) {
-                    $unitPrice = $unitPrice / $product->per_quantity_pieces;
-                    }
-                    }
+                        $fallbackPrice = $product ? ($isDealer ? $product->price : ($product->per_quantity_pieces > 1 ? $product->price / $product->per_quantity_pieces : $product->price)) : $item->price;
+                        $origUnitPrice = $item->original_price ?? $fallbackPrice;
 
-                    $unitDiscount = ($displayQuantity > 0) ? ($item->discount_amount / $displayQuantity) : 0;
-                    }
-                    $lineTotal = $item->total; // This includes tax in InvoiceItem? No, InvoiceItem total usually includes tax?
-                    // Migration: unit_price, tax_amount, discount_amount, total.
-                    // We need to verify how total is calculated in CreateInvoice.
-                    // In CreateInvoice: total = (unit * qty) + (unitTax * qty) - discount.
-                    // So $item->total is the final line total.
+                        $lineGrossTotal = $origUnitPrice * $item->dispatched_quantity;
+                        $lineDiscountTotal = $isDealer ? (($item->discount_amount ?? 0) * $item->dispatched_quantity) : 0;
+                        $lineTaxableAmount = $lineGrossTotal - $lineDiscountTotal;
 
-                    // For display consistency with existing table:
-                    $lineOriginalTotal = $unitPrice * $displayQuantity;
-                    $lineFinalTotal = $lineOriginalTotal - $item->discount_amount;
+                        $displayGstRate = $product ? $product->gst_percentage : ($displayOrder && $displayOrder->tax > 0 ? round(($displayOrder->tax / $displayOrder->subtotal) * 100, 1) : 18.0);
+                        $itemGst = $lineTaxableAmount * $displayGstRate / 100;
+                        $lineTotal = $lineTaxableAmount + $itemGst;
 
-                    if ($orderItem) {
-                    $product = $orderItem->product;
-                    $productName = $orderItem->product_name;
-                    $productId = $orderItem->product_id;
-                    } else {
-                    $rewardClaim = $invoice->rewardClaim;
-                    $product = ($rewardClaim && $rewardClaim->reward) ? $rewardClaim->reward->product : null;
-                    $productName = ($rewardClaim && $rewardClaim->reward) ? $rewardClaim->reward->name : 'Reward Item';
-                    $productId = $product ? $product->id : 'N/A';
-                    }
-                    } else {
-                    $orderItem = $item;
-                    $product = $orderItem->product;
-                    $productName = $orderItem->product_name;
-                    $productId = $orderItem->product_id;
-                    $isDealer = $displayOrder && $displayOrder->customer_type === 'dealer';
-
-                    if ($isDealer) {
-                    $displayQuantity = round($item->dispatched_quantity * $item->per_unit_pieces);
-                    $unitPrice = (!empty($item->piece_price) && $item->piece_price > 0) ? $item->piece_price : ($item->per_unit_pieces > 0 ? (($item->original_price ?? ($product ? $product->price : $item->price)) / $item->per_unit_pieces) : $item->price);
-                    $unitDiscount = ($item->per_unit_pieces > 0) ? (($item->discount_amount ?? 0) / $item->per_unit_pieces) : 0;
-                    } else {
-                    $displayQuantity = round($item->dispatched_quantity, 2);
-
-                    // For B2C, the price should be piece price
-                    $fallbackPrice = $product ? ($product->per_quantity_pieces > 1 ? ($product->price / $product->per_quantity_pieces) : $product->price) : $item->price;
-                    $unitPrice = $item->original_price ?? $fallbackPrice;
-
-                    // Fix old B2C orders where original_price was incorrectly stored as the full unit price
-                    if ($item->per_unit_pieces == 1 && $product && $product->per_quantity_pieces > 1) {
-                    if ($unitPrice >= $item->price * $product->per_quantity_pieces * 0.9) {
-                    $unitPrice = $unitPrice / $product->per_quantity_pieces;
-                    }
-                    }
-
-                    $unitDiscount = 0; // B2C orders do not have discounts
-                    }
-
-                    $lineOriginalTotal = $unitPrice * $displayQuantity;
-                    $lineDiscountTotal = $unitDiscount * $displayQuantity;
-                    $lineFinalTotal = $lineOriginalTotal - $lineDiscountTotal;
-
-                    if ($item->tax > 0 && $item->quantity > 0) {
-                    $lineGst = ($item->tax / $item->quantity) * $item->dispatched_quantity;
-                    $gstRate = ($item->price > 0 && $item->quantity > 0) ? ($item->tax / ($item->price * $item->quantity)) * 100 : 0;
-                    } else {
-                    $gstRate = $product ? $product->gst_percentage : ($displayOrder && $displayOrder->tax > 0 ? ($displayOrder->tax / $displayOrder->subtotal * 100) : 0);
-                    $lineGst = $lineFinalTotal * $gstRate / 100;
-                    }
-
-                    $lineTotal = $lineFinalTotal + $lineGst;
+                        if ($isDealer && $item->per_unit_pieces > 0) {
+                            $unitPrice = (!empty($item->piece_price) && $item->piece_price > 0) 
+                                ? $item->piece_price 
+                                : ($lineGrossTotal / max($displayQuantity, 1));
+                            $unitDiscount = ($item->per_unit_pieces > 0) ? (($item->discount_amount ?? 0) / $item->per_unit_pieces) : 0;
+                        } else {
+                            $unitPrice = $origUnitPrice;
+                            $unitDiscount = 0;
+                        }
                     }
 
                     if ($displayOrder && $displayOrder->customer_type === 'dealer') {
-                    $dispatchedTotalPieces += round($displayQuantity); // already in pieces
+                        $dispatchedTotalPieces += round($displayQuantity);
                     } else {
-                    $dispatchedTotalPieces += round($displayQuantity); // B2C orders are already piece-wise
+                        $dispatchedTotalPieces += round($displayQuantity);
                     }
 
                     $imagePath = $product && $product->images->first() ? $product->images->first()->image_path : null;
@@ -344,10 +344,13 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
                             <div class="text-[10px] font-black text-emerald-600 uppercase tracking-tighter mt-1">
                                 B2B Discount: -₹{{ number_format($unitDiscount, 2) }}/pc
                             </div>
+                            <div class="text-[9px] font-bold text-slate-400 italic mt-0.5">
+                                Net: ₹{{ number_format($unitPrice - $unitDiscount, 2) }}/pc
+                            </div>
                             @endif
                             @else
                             <div class="text-sm font-bold text-slate-700 whitespace-nowrap italic">₹{{ number_format($unitPrice, 2) }} / piece</div>
-                            @if($unitDiscount > 0 && $displayOrder && $displayOrder->customer_type === 'dealer')
+                            @if($unitDiscount > 0)
                             <div class="text-[10px] font-black text-emerald-600 uppercase tracking-tighter mt-1">
                                 Saved ₹{{ number_format($unitDiscount, 2) }}
                             </div>
@@ -356,36 +359,33 @@ $customer = $displayOrder ? $displayOrder->customer : (isset($invoice) && $invoi
                         </td>
                         <td class="px-6 py-5 text-center">
                             @if($displayOrder && $displayOrder->customer_type === 'dealer')
-                            <div class="text-xs font-black text-slate-900">{{ round($displayQuantity) }} Pieces</div>
+                            <div class="text-xs font-black text-slate-900">
+                                {{ $displayUnits }} {{ Str::plural('Unit', $displayUnits) }}
+                            </div>
+                            <div class="text-[10px] font-bold text-indigo-600 mt-0.5">
+                                ({{ round($displayQuantity) }} Pieces)
+                            </div>
                             @else
                             <div class="text-xs font-black text-slate-900">{{ $displayQuantity }} Pieces</div>
                             @endif
                         </td>
                         <td class="px-6 py-5 text-center">
-                            @php
-                            $itemGst = 0;
-                            $displayGstRate = $gstRate ?? 0;
-
-                            if (isset($invoice)) {
-                            $itemGst = $item->tax_amount;
-                            if ($itemGst <= 0 && $orderItem && $orderItem->product && $orderItem->product->gst_percentage > 0) {
-                                $itemGst = ($item->unit_price * $item->quantity) * $orderItem->product->gst_percentage / 100;
-                                $displayGstRate = $orderItem->product->gst_percentage;
-                                }
-                                } else {
-                                $itemGst = $lineGst;
-                                }
-                                @endphp
-                                <span class="text-xs font-bold text-slate-500 italic">₹{{ number_format($itemGst, 2) }}</span>
-                                <div class="text-[8px] text-slate-400 uppercase font-black tracking-tighter mt-1">
-                                    ({{ number_format($displayGstRate, 1) }}%)
-                                </div>
+                            <span class="text-xs font-bold text-slate-700 italic">₹{{ number_format($itemGst, 2) }}</span>
+                            <div class="text-[9px] text-slate-400 uppercase font-black tracking-tighter mt-1">
+                                ({{ number_format($displayGstRate, 1) }}%)
+                            </div>
                         </td>
                         <td class="px-6 py-5 text-right whitespace-nowrap">
                             <div class="text-sm font-black text-slate-900 italic">₹{{ number_format($lineTotal, 2) }}</div>
                             @if($displayOrder && $displayOrder->customer_type === 'dealer')
-                            <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase">
-                                (₹{{ number_format($lineFinalTotal, 2) }} + ₹{{ number_format($itemGst, 2) }})
+                            <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase flex flex-col items-end gap-0.5">
+                                @if($lineDiscountTotal > 0)
+                                <span class="text-slate-400">Gross: ₹{{ number_format($lineGrossTotal, 2) }}</span>
+                                <span class="text-emerald-600 font-black">Disc: -₹{{ number_format($lineDiscountTotal, 2) }}</span>
+                                <span class="text-slate-600 font-bold">(₹{{ number_format($lineTaxableAmount, 2) }} + ₹{{ number_format($itemGst, 2) }} GST)</span>
+                                @else
+                                <span>(₹{{ number_format($lineTaxableAmount, 2) }} + ₹{{ number_format($itemGst, 2) }} GST)</span>
+                                @endif
                             </div>
                             @endif
                         </td>

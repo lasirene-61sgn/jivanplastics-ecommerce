@@ -252,4 +252,69 @@ class Order extends Model
             $this->customer->addLoyaltyPoints($points);
         }
     }
+
+    /**
+     * Check if order has any accepted items.
+     */
+    public function getHasAcceptedItemsAttribute(): bool
+    {
+        return $this->items->where('status', 'accepted')->isNotEmpty();
+    }
+
+    /**
+     * Check if order has any pending items awaiting admin decision.
+     */
+    public function getHasPendingItemDecisionsAttribute(): bool
+    {
+        return $this->items->where('status', 'pending')->isNotEmpty();
+    }
+
+    /**
+     * Synchronize order status based on item statuses.
+     */
+    public function syncStatusWithItems(): void
+    {
+        $this->load('items');
+        $items = $this->items;
+
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $acceptedCount = $items->where('status', 'accepted')->count();
+        $rejectedCount = $items->where('status', 'rejected')->count();
+        $pendingCount = $items->where('status', 'pending')->count();
+
+        if ($pendingCount === 0 && $rejectedCount === $items->count()) {
+            // All items rejected
+            $this->update([
+                'status' => 'rejected',
+                'rejected_at' => $this->rejected_at ?? now(),
+                'accepted_at' => null,
+            ]);
+        } elseif ($acceptedCount > 0) {
+            // At least one item accepted
+            $this->update([
+                'status' => 'accepted',
+                'accepted_at' => $this->accepted_at ?? now(),
+                'rejected_at' => null,
+            ]);
+        } elseif ($pendingCount > 0 && $acceptedCount === 0) {
+            // Only pending or rejected, none accepted
+            if ($this->status !== 'rejected') {
+                $this->update([
+                    'status' => 'pending',
+                    'accepted_at' => null,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Get only the accepted items that are allocated for manufacturing.
+     */
+    public function allocatedItems()
+    {
+        return $this->hasMany(OrderItem::class)->where('status', 'accepted');
+    }
 }

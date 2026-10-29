@@ -129,12 +129,25 @@ class OrderController extends Controller
             $updateData['accepted_at'] = now();
             // Clear rejected_at if previously rejected and now accepted
             $updateData['rejected_at'] = null;
+            // Also accept all pending items
+            $order->items()->where('status', 'pending')->update([
+                'status' => 'accepted',
+            ]);
         } elseif ($status === 'rejected') {
             $updateData['rejected_at'] = now();
             // Clear accepted_at if previously accepted and now rejected
             $updateData['accepted_at'] = null;
             if ($request->filled('rejection_reason')) {
                 $updateData['rejection_reason'] = $request->rejection_reason;
+            }
+            // Also reject all non-rejected items
+            foreach ($order->items()->where('status', '!=', 'rejected')->get() as $item) {
+                $item->update([
+                    'status' => 'rejected',
+                    'rejected_quantity' => $item->quantity,
+                    'rejected_pieces' => $item->total_pieces,
+                    'rejection_reason' => $request->rejection_reason ?? 'Order rejected by Admin',
+                ]);
             }
         } elseif ($status === 'completed') {
             $updateData['completed_at'] = $order->completed_at ?? now();
@@ -163,6 +176,10 @@ class OrderController extends Controller
         $orders = Order::whereIn('id', $request->order_ids)->get();
         
         foreach ($orders as $order) {
+            // Guard: Order must be accepted and have at least one accepted item
+            if (in_array($order->status, ['pending', 'rejected', 'cancelled']) || !$order->has_accepted_items) {
+                return redirect()->back()->with('error', "Order #{$order->order_number} cannot be allocated until items are accepted by admin.");
+            }
             $order->update([
                 'manufacturing_team_id' => $request->manufacturing_team_id,
                 'manufacturing_status' => 'allocated',
@@ -539,5 +556,98 @@ class OrderController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Edit permission granted to manufacturing team. (' . $order->mfg_edit_permission_count . '/2 used)');
+    }
+
+    /**
+     * Update individual order item status (accept / reject).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Order  $order
+     * @param  \App\Models\OrderItem  $item
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateItemStatus(Request $request, Order $order, OrderItem $item)
+    {
+        $request->validate([
+            'status' => 'required|string|in:accepted,rejected',
+            'rejection_reason' => 'nullable|string|max:500',
+        ]);
+
+        if ($item->order_id !== $order->id) {
+            abort(404, 'Item does not belong to this order.');
+        }
+
+        $newStatus = $request->input('status');
+
+        if ($newStatus === 'accepted') {
+            $item->update([
+                'status' => 'accepted',
+                'rejected_quantity' => 0,
+                'rejected_pieces' => 0,
+                'rejection_reason' => null,
+            ]);
+        } elseif ($newStatus === 'rejected') {
+            $item->update([
+                'status' => 'rejected',
+                'rejected_quantity' => $item->quantity,
+                'rejected_pieces' => $item->total_pieces,
+                'rejection_reason' => $request->input('rejection_reason') ?? 'Rejected by Admin',
+            ]);
+        }
+
+        // Sync order status based on all items
+        $order->syncStatusWithItems();
+
+        return redirect()->back()->with('success', "Item '{$item->product_name}' marked as {$newStatus} successfully.");
+    }
+
+    /**
+     * Bulk update order items status (accept / reject).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Order  $order
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bulkUpdateItemStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'item_ids' => 'required|array|min:1',
+            'item_ids.*' => 'exists:order_items,id',
+            'action' => 'required|string|in:accept,reject',
+            'rejection_reason' => 'nullable|string|max:500',
+        ]);
+
+        $action = $request->input('action');
+        $itemIds = $request->input('item_ids');
+
+        $items = $order->items()->whereIn('id', $itemIds)->get();
+
+        if ($items->isEmpty()) {
+            return redirect()->back()->with('error', 'No valid items selected for update.');
+        }
+
+        foreach ($items as $item) {
+            if ($action === 'accept') {
+                $item->update([
+                    'status' => 'accepted',
+                    'rejected_quantity' => 0,
+                    'rejected_pieces' => 0,
+                    'rejection_reason' => null,
+                ]);
+            } elseif ($action === 'reject') {
+                $item->update([
+                    'status' => 'rejected',
+                    'rejected_quantity' => $item->quantity,
+                    'rejected_pieces' => $item->total_pieces,
+                    'rejection_reason' => $request->input('rejection_reason') ?? 'Rejected by Admin',
+                ]);
+            }
+        }
+
+        // Sync order status based on all items
+        $order->syncStatusWithItems();
+
+        $actionLabel = $action === 'accept' ? 'accepted' : 'rejected';
+        return redirect()->back()->with('success', count($items) . " item(s) have been {$actionLabel} successfully.");
     }
 }

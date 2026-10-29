@@ -132,6 +132,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/orders/{order}/partial-dispatch', [OrderController::class, 'partialDispatch'])->name('orders.partial-dispatch');
         Route::post('/orders/{order}/dispatch', [OrderController::class, 'markAsDispatched'])->name('orders.dispatch');
         Route::post('/orders/{order}/grant-edit', [OrderController::class, 'grantEditPermission'])->name('orders.grant-edit');
+        Route::put('/orders/{order}/items/{item}/status', [OrderController::class, 'updateItemStatus'])->name('orders.items.status');
+        Route::post('/orders/{order}/items/bulk-status', [OrderController::class, 'bulkUpdateItemStatus'])->name('orders.items.bulk-status');
         
         // Return request management routes
         Route::get('/return-requests', [ReturnRequestController::class, 'index'])->name('return-requests.index');

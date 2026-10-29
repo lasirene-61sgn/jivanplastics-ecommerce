@@ -100,25 +100,67 @@
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-6 border-b border-slate-100 bg-slate-50/50 uppercase tracking-widest text-[10px] font-black text-slate-400">Order Items - Dispatch Status</div>
+            <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="uppercase tracking-widest text-[10px] font-black text-slate-400">Order Items - Dispatch Status</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            {{ $order->items->where('status', 'accepted')->count() }} Accepted
+                        </span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                            {{ $order->items->where('status', 'pending')->count() }} Pending
+                        </span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-100">
+                            {{ $order->items->where('status', 'rejected')->count() }} Rejected
+                        </span>
+                    </div>
+                </div>
+                {{-- Bulk Actions Bar --}}
+                @if(!in_array($order->status, ['completed', 'cancelled']))
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="selected-badge" class="hidden text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                        <span id="selected-count">0</span> selected
+                    </span>
+                    <button type="button" id="bulk-accept-btn" onclick="submitBulkItemsAction('accept')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-check-circle"></i> Bulk Accept
+                    </button>
+                    <button type="button" id="bulk-reject-btn" onclick="openBulkRejectModal()" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-times-circle"></i> Bulk Reject
+                    </button>
+                </div>
+                @endif
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50/50 border-b border-slate-200">
+                            @if(!in_array($order->status, ['completed', 'cancelled']))
+                            <th class="px-4 py-4 text-center w-10">
+                                <input type="checkbox" id="select-all-items" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" onchange="toggleSelectAllItems(this)">
+                            </th>
+                            @endif
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Product</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">SKU</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Ordered</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Ready</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Dispatched</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Rejected</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Pending</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Status</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center">SKU</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Ordered</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Ready</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Dispatched</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Rejected</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Pending</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Admin Status</th>
+                            <th class="px-4 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Dispatch Status</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center whitespace-nowrap">Action</th>
                             <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-right">Line Total</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach($order->items as $item)
-                        <tr class="hover:bg-slate-50/50 transition-colors">
+                        <tr class="hover:bg-slate-50/50 transition-colors {{ $item->status === 'rejected' ? 'bg-rose-50/20' : '' }}">
+                            @if(!in_array($order->status, ['completed', 'cancelled']))
+                            <td class="px-4 py-5 text-center">
+                                <input type="checkbox" name="item_ids[]" value="{{ $item->id }}" class="item-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" onchange="updateSelectedItems()">
+                            </td>
+                            @endif
                             <td class="px-6 py-5">
                                 <span class="text-sm font-bold text-slate-900 leading-tight block">{{ $item->product_name }}</span>
                                 @if($order->customer_type === 'dealer')
@@ -140,25 +182,25 @@
                                 </div>
                                 @endif
                             </td>
-                            <td class="px-6 py-5 text-center text-xs font-mono text-slate-400 tracking-tighter">{{ $item->product_sku ?? 'N/A' }}</td>
-                            <td class="px-6 py-5 text-center">
+                            <td class="px-4 py-5 text-center text-xs font-mono text-slate-400 tracking-tighter">{{ $item->product_sku ?? 'N/A' }}</td>
+                            <td class="px-4 py-5 text-center">
                                 <div class="flex flex-col md:items-center mt-2 md:mt-0 gap-1">
                                     <span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-black text-slate-600">{{ $item->total_pieces }} pcs</span>
                                     <span class="text-[10px] text-slate-400 italic font-medium">= {{ $item->quantity }} units</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-5 text-center">
+                            <td class="px-4 py-5 text-center">
                                 <div class="flex flex-col items-center gap-1">
                                     <span class="px-2.5 py-1 bg-green-50 rounded-lg text-xs font-black text-green-600">{{ round($item->dispatch_pending_quantity * $item->per_unit_pieces) }} pcs</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-5 text-center">
+                            <td class="px-4 py-5 text-center">
                                 <div class="flex flex-col items-center gap-1">
                                     <span class="px-2.5 py-1 bg-green-50 rounded-lg text-xs font-black text-green-600">{{ $item->dispatched_quantity * $item->per_unit_pieces }} pcs</span>
                                     <span class="text-[10px] text-slate-400 italic font-medium">= {{ $item->dispatched_quantity }} units</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-5 text-center">
+                            <td class="px-4 py-5 text-center">
                                 @if($item->rejected_pieces > 0)
                                 <div class="flex flex-col items-center gap-1">
                                     <span class="px-2.5 py-1 bg-rose-50 rounded-lg text-xs font-black text-rose-600" title="{{ $item->rejection_reason }}">{{ $item->rejected_pieces }} pcs</span>
@@ -170,7 +212,7 @@
                                 <span class="text-slate-300 font-bold">-</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-5 text-center">
+                            <td class="px-4 py-5 text-center">
                                 @if($item->manufacturing_pending_pieces > 0)
                                 @php $pendingPcs = max(0, $item->total_pieces - $item->manufactured_pieces - $item->rejected_pieces); @endphp
                                 <div class="flex flex-col items-center gap-1">
@@ -183,7 +225,24 @@
                                 <span class="text-slate-300 font-bold">0 pcs</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-5 text-center">
+                            {{-- Admin Status Column --}}
+                            <td class="px-4 py-5 text-center whitespace-nowrap">
+                                @if($item->status === 'accepted')
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 tracking-wider">
+                                    <i class="fas fa-check-circle mr-1"></i> Accepted
+                                </span>
+                                @elseif($item->status === 'rejected')
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-rose-100 text-rose-800 tracking-wider" title="{{ $item->rejection_reason }}">
+                                    <i class="fas fa-times-circle mr-1"></i> Rejected
+                                </span>
+                                @else
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-amber-100 text-amber-800 tracking-wider">
+                                    <i class="fas fa-clock mr-1"></i> Pending
+                                </span>
+                                @endif
+                            </td>
+                            {{-- Dispatch Status Column --}}
+                            <td class="px-4 py-5 text-center whitespace-nowrap">
                                 @if($item->is_fully_dispatched)
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-green-100 text-green-700 tracking-widest"><i class="fas fa-check-circle mr-1"></i> Complete</span>
                                 @elseif($item->dispatched_quantity > 0 && $item->rejected_quantity > 0 && $item->pending_quantity == 0)
@@ -194,6 +253,41 @@
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-amber-100 text-amber-700 tracking-widest"><i class="fas fa-hourglass-half mr-1"></i> Partial</span>
                                 @else
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-400 tracking-widest">Awaiting</span>
+                                @endif
+                            </td>
+                            {{-- Action Column --}}
+                            <td class="px-6 py-5 text-center whitespace-nowrap">
+                                @if(!in_array($order->status, ['completed', 'cancelled']))
+                                <div class="flex items-center justify-center gap-1.5">
+                                    @if($item->status === 'pending')
+                                    <form action="{{ route('admin.orders.items.status', ['order' => $order->id, 'item' => $item->id]) }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="status" value="accepted">
+                                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-xs flex items-center gap-1" title="Accept Item">
+                                            <i class="fas fa-check"></i> Accept
+                                        </button>
+                                    </form>
+                                    <button type="button" onclick="openSingleRejectModal({{ $item->id }}, '{{ addslashes($item->product_name) }}')" class="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-xs flex items-center gap-1" title="Reject Item">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                    @elseif($item->status === 'accepted')
+                                    <button type="button" onclick="openSingleRejectModal({{ $item->id }}, '{{ addslashes($item->product_name) }}')" class="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-slate-200 hover:border-rose-200">
+                                        Reject
+                                    </button>
+                                    @elseif($item->status === 'rejected')
+                                    <form action="{{ route('admin.orders.items.status', ['order' => $order->id, 'item' => $item->id]) }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="status" value="accepted">
+                                        <button type="submit" class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-slate-200 hover:border-emerald-200 flex items-center gap-1">
+                                            <i class="fas fa-undo text-[8px]"></i> Re-Accept
+                                        </button>
+                                    </form>
+                                    @endif
+                                </div>
+                                @else
+                                <span class="text-slate-300 font-bold text-xs">-</span>
                                 @endif
                             </td>
                             <td class="px-6 py-5 text-right whitespace-nowrap">
@@ -644,16 +738,26 @@
                         @endif
 
 
-                        {{-- 4. ALLOCATE / REALLOCATE SECTION (Independent condition) --}}
-                        {{-- Visible when the order is NOT rejected/cancelled/pending, and either unallocated or currently in allocated status --}}
-                        @if(!in_array($order->status, ['rejected', 'cancelled', 'pending']) && (!$order->manufacturing_team_id || $order->manufacturing_status === 'allocated'))
+                        {{-- 4. ALLOCATE / REALLOCATE SECTION --}}
+                        {{-- Visible ONLY when admin has accepted order/items, and order is not rejected/cancelled/pending --}}
+                        @php
+                            $hasAcceptedItems = $order->items->where('status', 'accepted')->count() > 0;
+                            $hasPendingItems = $order->items->where('status', 'pending')->count() > 0;
+                            $isOrderAccepted = $order->status === 'accepted';
+                        @endphp
+                        @if($isOrderAccepted && $hasAcceptedItems && (!$order->manufacturing_team_id || $order->manufacturing_status === 'allocated'))
                         <form action="{{ route('admin.orders.allocate') }}" method="POST" class="space-y-4 pt-4 border-t border-slate-100">
                             @csrf
                             <input type="hidden" name="order_ids[]" value="{{ $order->id }}">
                             <div>
-                                <label class="text-xs font-black text-slate-700 uppercase mb-2 block">
-                                    {{ $order->manufacturingTeam ? 'Reallocate Partner' : 'Select Partner' }}
-                                </label>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-xs font-black text-slate-700 uppercase block">
+                                        {{ $order->manufacturingTeam ? 'Reallocate Partner' : 'Select Partner' }}
+                                    </label>
+                                    <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full uppercase">
+                                        {{ $order->items->where('status', 'accepted')->count() }} Item(s) Accepted
+                                    </span>
+                                </div>
                                 <select name="manufacturing_team_id" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 font-bold text-sm bg-slate-50" required>
                                     <option value="">Select a team</option>
                                     @foreach($manufacturingTeams as $team)
@@ -669,9 +773,22 @@
                                 @endif
                             </div>
                             <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                                <p class="text-[10px] text-slate-500 font-medium my-1"><i class="fas fa-shield-alt text-emerald-600 mr-1"></i> Only accepted items will be allocated to manufacturing. Rejected items are excluded.</p>
                                 {{ $order->manufacturingTeam ? 'Reallocate' : 'Allocate' }}
                             </button>
                         </form>
+                        @elseif($order->status === 'pending' || $hasPendingItems)
+                        <div class="pt-4 border-t border-slate-100">
+                            <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-center space-y-1.5">
+                                <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-sm font-black">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <p class="text-xs font-black text-amber-800 uppercase tracking-wider">Allocation Locked</p>
+                                <p class="text-[11px] text-amber-700 font-medium leading-relaxed">
+                                    Please accept order items in the dispatch status table above. Partner allocation unlocks once items are accepted.
+                                </p>
+                            </div>
+                        </div>
                         @endif
 
 
@@ -844,4 +961,174 @@
         background: #cbd5e1;
     }
 </style>
+{{-- Hidden Form for Bulk Action --}}
+<form id="bulk-items-form" action="{{ route('admin.orders.items.bulk-status', $order) }}" method="POST" class="hidden">
+    @csrf
+    <input type="hidden" name="action" id="bulk-items-action" value="accept">
+    <input type="hidden" name="rejection_reason" id="bulk-items-reason" value="">
+    <div id="bulk-items-inputs"></div>
+</form>
+
+{{-- Rejection Modal --}}
+<div id="item-reject-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-sm font-black">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 id="reject-modal-title" class="text-sm font-black text-slate-900 uppercase tracking-wider">Reject Item</h4>
+            </div>
+            <button type="button" onclick="closeRejectModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <p id="reject-modal-desc" class="text-xs text-slate-600 font-medium">Please specify a reason for rejecting this item.</p>
+
+        <form id="item-reject-modal-form" method="POST" class="space-y-4">
+            @csrf
+            <input type="hidden" name="_method" id="reject-modal-method" value="PUT">
+            <input type="hidden" name="status" value="rejected">
+            <input type="hidden" name="action" value="reject">
+            <div id="reject-modal-bulk-inputs"></div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rejection Reason</label>
+                <textarea name="rejection_reason" id="reject-modal-reason-input" rows="3" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none" placeholder="E.g., Out of stock, Discontinued, Dimensions unavailable..."></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeRejectModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm">Confirm Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleSelectAllItems(masterCheckbox) {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = masterCheckbox.checked;
+    });
+    updateSelectedItems();
+}
+
+function updateSelectedItems() {
+    const selected = document.querySelectorAll('.item-checkbox:checked');
+    const count = selected.length;
+    const total = document.querySelectorAll('.item-checkbox').length;
+    const master = document.getElementById('select-all-items');
+    const badge = document.getElementById('selected-badge');
+    const countSpan = document.getElementById('selected-count');
+    const acceptBtn = document.getElementById('bulk-accept-btn');
+    const rejectBtn = document.getElementById('bulk-reject-btn');
+
+    if (master) {
+        master.checked = (total > 0 && count === total);
+    }
+
+    if (count > 0) {
+        if (badge) badge.classList.remove('hidden');
+        if (countSpan) countSpan.textContent = count;
+        if (acceptBtn) {
+            acceptBtn.removeAttribute('disabled');
+        }
+        if (rejectBtn) {
+            rejectBtn.removeAttribute('disabled');
+        }
+    } else {
+        if (badge) badge.classList.add('hidden');
+        if (acceptBtn) {
+            acceptBtn.setAttribute('disabled', 'disabled');
+        }
+        if (rejectBtn) {
+            rejectBtn.setAttribute('disabled', 'disabled');
+        }
+    }
+}
+
+function submitBulkItemsAction(action) {
+    const selected = document.querySelectorAll('.item-checkbox:checked');
+    if (selected.length === 0) {
+        alert('Please select at least one item.');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to ' + action + ' ' + selected.length + ' selected item(s)?')) {
+        return;
+    }
+
+    const form = document.getElementById('bulk-items-form');
+    document.getElementById('bulk-items-action').value = action;
+    const container = document.getElementById('bulk-items-inputs');
+    container.innerHTML = '';
+
+    selected.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'item_ids[]';
+        input.value = cb.value;
+        container.appendChild(input);
+    });
+
+    form.submit();
+}
+
+function openSingleRejectModal(itemId, productName) {
+    const modal = document.getElementById('item-reject-modal');
+    const form = document.getElementById('item-reject-modal-form');
+    const title = document.getElementById('reject-modal-title');
+    const desc = document.getElementById('reject-modal-desc');
+    const methodInput = document.getElementById('reject-modal-method');
+    const bulkInputs = document.getElementById('reject-modal-bulk-inputs');
+
+    title.textContent = 'Reject Item';
+    desc.textContent = 'Rejecting: ' + productName;
+    form.action = "{{ url('admin/orders/' . $order->id . '/items') }}/" + itemId + "/status";
+    methodInput.value = 'PUT';
+    bulkInputs.innerHTML = '';
+    document.getElementById('reject-modal-reason-input').value = '';
+
+    modal.classList.remove('hidden');
+}
+
+function openBulkRejectModal() {
+    const selected = document.querySelectorAll('.item-checkbox:checked');
+    if (selected.length === 0) {
+        alert('Please select at least one item to reject.');
+        return;
+    }
+
+    const modal = document.getElementById('item-reject-modal');
+    const form = document.getElementById('item-reject-modal-form');
+    const title = document.getElementById('reject-modal-title');
+    const desc = document.getElementById('reject-modal-desc');
+    const methodInput = document.getElementById('reject-modal-method');
+    const bulkInputs = document.getElementById('reject-modal-bulk-inputs');
+
+    title.textContent = 'Bulk Reject Items';
+    desc.textContent = 'Rejecting ' + selected.length + ' selected item(s).';
+    form.action = "{{ route('admin.orders.items.bulk-status', $order) }}";
+    methodInput.value = 'POST';
+    bulkInputs.innerHTML = '';
+
+    selected.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'item_ids[]';
+        input.value = cb.value;
+        bulkInputs.appendChild(input);
+    });
+
+    document.getElementById('reject-modal-reason-input').value = '';
+    modal.classList.remove('hidden');
+}
+
+function closeRejectModal() {
+    const modal = document.getElementById('item-reject-modal');
+    if (modal) modal.classList.add('hidden');
+}
+</script>
 @endsection
