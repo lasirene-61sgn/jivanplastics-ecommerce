@@ -47,6 +47,8 @@ class B2CApiController extends Controller
 
         $token = $customer->createToken('B2CToken')->plainTextToken;
 
+        $customer->recordLogin('B2C API', $request);
+
         return response()->json([
             'message' => 'Login successful',
             'customer' => $customer,
@@ -80,6 +82,8 @@ class B2CApiController extends Controller
         $customer = $request->user();
         $request->user()->currentAccessToken()->delete();
         $token = $customer->createToken('B2CToken')->plainTextToken;
+
+        $customer->recordLogin('B2C API', $request);
 
         return response()->json([
             'message' => 'Token refreshed successfully',

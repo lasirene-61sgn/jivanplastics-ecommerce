@@ -87,7 +87,7 @@ class DashboardController extends Controller
             abort(403, 'Unauthorized access to this order.');
         }
         
-        $order->load(['customer']);
+        $order->load(['customer', 'productionLogs.orderItem', 'productionLogs.manufacturingTeam']);
         // Only accepted items are allocated to go to the manufacturing team
         $order->setRelation('items', $order->items()->where('status', 'accepted')->with('product')->get());
         
@@ -186,9 +186,52 @@ class DashboardController extends Controller
             'rejected_pieces' => 'nullable|array',
             'rejected_pieces.*' => 'integer|min:0',
             'rejection_reasons' => 'nullable|array',
-            'rejection_reasons.*' => 'nullable|string',
+            'rejection_reasons.*' => 'nullable|string|max:500',
         ]);
         
+        // Strict pre-validation: check that totals do not exceed pending pieces
+        // and ensure rejection reasons are provided when pieces are rejected.
+        $hasAnyInput = false;
+        foreach ($request->completed_pieces as $itemId => $completedPieces) {
+            $completedPieces = (int) $completedPieces;
+            $rejectedPieces = isset($request->rejected_pieces[$itemId]) ? (int) $request->rejected_pieces[$itemId] : 0;
+            $rejectionReason = isset($request->rejection_reasons[$itemId]) ? trim($request->rejection_reasons[$itemId]) : '';
+
+            if ($completedPieces > 0 || $rejectedPieces > 0) {
+                $hasAnyInput = true;
+            }
+
+            $orderItem = OrderItem::where('id', $itemId)
+                ->where('order_id', $order->id)
+                ->where('status', 'accepted')
+                ->first();
+
+            if (!$orderItem) {
+                continue;
+            }
+
+            $canProcessPieces = $orderItem->manufacturing_pending_pieces;
+            $totalToProcessPieces = $completedPieces + $rejectedPieces;
+
+            // Validate that completed + rejected does not exceed pending pieces
+            if ($totalToProcessPieces > $canProcessPieces) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "For '{$orderItem->product_name}', Total processed pieces (Completed: {$completedPieces} + Rejected: {$rejectedPieces} = {$totalToProcessPieces} pcs) cannot exceed pending pieces ({$canProcessPieces} pcs). Please check the completed and rejected counts.");
+            }
+
+            // Require rejection reason when rejected pieces are entered
+            if ($rejectedPieces > 0 && empty($rejectionReason)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Please provide a rejection message/reason for '{$orderItem->product_name}' because {$rejectedPieces} pcs are marked as rejected.");
+            }
+        }
+
+        if (!$hasAnyInput) {
+            return redirect()->back()->with('error', 'Please enter at least 1 completed or rejected piece to submit progress.');
+        }
+
         return DB::transaction(function () use ($request, $order, $manufacturingTeam) {
             $totalCompletedPieces = 0;
             $totalRejectedPieces = 0;
@@ -202,21 +245,9 @@ class DashboardController extends Controller
                     ->first();
                     
                 if ($orderItem && $orderItem->per_unit_pieces > 0) {
-                    $rejectedPieces = isset($request->rejected_pieces[$itemId]) ? (int)$request->rejected_pieces[$itemId] : 0;
-                    $rejectionReason = isset($request->rejection_reasons[$itemId]) ? $request->rejection_reasons[$itemId] : null;
-
-                    $canProcessPieces = $orderItem->manufacturing_pending_pieces;
-                    $totalToProcessPieces = $completedPieces + $rejectedPieces;
-                    
-                    // Clamp inputs to pending pieces
-                    if ($totalToProcessPieces > $canProcessPieces && $canProcessPieces > 0) {
-                         $actualCompletedPieces = min($completedPieces, $canProcessPieces);
-                         $remainingPieces = $canProcessPieces - $actualCompletedPieces;
-                         $actualRejectedPieces = min($rejectedPieces, $remainingPieces);
-                    } else {
-                         $actualCompletedPieces = $completedPieces;
-                         $actualRejectedPieces = $rejectedPieces;
-                    }
+                    $actualCompletedPieces = (int) $completedPieces;
+                    $actualRejectedPieces = isset($request->rejected_pieces[$itemId]) ? (int) $request->rejected_pieces[$itemId] : 0;
+                    $rejectionReason = isset($request->rejection_reasons[$itemId]) ? trim($request->rejection_reasons[$itemId]) : null;
                     
                     if ($actualCompletedPieces > 0 || $actualRejectedPieces > 0) {
                         $newManufacturedPieces = $orderItem->manufactured_pieces + $actualCompletedPieces;
@@ -226,12 +257,20 @@ class DashboardController extends Controller
                         $newManufacturedUnits = $newManufacturedPieces / $orderItem->per_unit_pieces;
                         $newRejectedUnits = $newRejectedPieces / $orderItem->per_unit_pieces;
 
+                        // Combine rejection reasons if previous exists
+                        $combinedRejectionReason = $orderItem->rejection_reason;
+                        if ($actualRejectedPieces > 0 && !empty($rejectionReason)) {
+                            $combinedRejectionReason = $orderItem->rejection_reason
+                                ? $orderItem->rejection_reason . ' | ' . $rejectionReason
+                                : $rejectionReason;
+                        }
+
                         $orderItem->update([
                             'manufactured_quantity' => $newManufacturedUnits,
                             'rejected_quantity' => $newRejectedUnits,
                             'manufactured_pieces' => $newManufacturedPieces,
                             'rejected_pieces' => $newRejectedPieces,
-                            'rejection_reason' => $rejectionReason ? ($orderItem->rejection_reason ? $orderItem->rejection_reason . '; ' . $rejectionReason : $rejectionReason) : $orderItem->rejection_reason,
+                            'rejection_reason' => $combinedRejectionReason,
                         ]);
                         
                         // Record production log for chronology timeline
@@ -243,7 +282,7 @@ class DashboardController extends Controller
                             'pieces_rejected' => $actualRejectedPieces,
                             'quantity_completed' => $orderItem->per_unit_pieces > 0 ? ($actualCompletedPieces / $orderItem->per_unit_pieces) : $actualCompletedPieces,
                             'quantity_rejected' => $orderItem->per_unit_pieces > 0 ? ($actualRejectedPieces / $orderItem->per_unit_pieces) : $actualRejectedPieces,
-                            'rejection_reason' => $rejectionReason,
+                            'rejection_reason' => $actualRejectedPieces > 0 ? $rejectionReason : null,
                         ]);
 
                         $totalCompletedPieces += $actualCompletedPieces;
@@ -440,6 +479,8 @@ class DashboardController extends Controller
             'corrected_manufactured_pieces.*' => 'integer|min:0',
             'corrected_rejected_pieces'     => 'nullable|array',
             'corrected_rejected_pieces.*'   => 'integer|min:0',
+            'corrected_rejection_reasons'   => 'nullable|array',
+            'corrected_rejection_reasons.*' => 'nullable|string|max:500',
             'correction_reason'             => 'required|string|max:500',
         ]);
 
@@ -453,6 +494,7 @@ class DashboardController extends Controller
                 continue;
             }
 
+            $manufacturedPieces = (int) $manufacturedPieces;
             $rejectedPieces = isset($request->corrected_rejected_pieces[$itemId])
                 ? (int) $request->corrected_rejected_pieces[$itemId]
                 : 0;
@@ -467,12 +509,22 @@ class DashboardController extends Controller
             $newManufacturedUnits = $manufacturedPieces / $orderItem->per_unit_pieces;
             $newRejectedUnits     = $rejectedPieces / $orderItem->per_unit_pieces;
 
-            $orderItem->update([
+            $itemRejectionReason = isset($request->corrected_rejection_reasons[$itemId]) ? trim($request->corrected_rejection_reasons[$itemId]) : null;
+
+            $updateData = [
                 'manufactured_pieces'   => $manufacturedPieces,
                 'rejected_pieces'       => $rejectedPieces,
                 'manufactured_quantity' => $newManufacturedUnits,
                 'rejected_quantity'     => $newRejectedUnits,
-            ]);
+            ];
+
+            if ($rejectedPieces > 0) {
+                $updateData['rejection_reason'] = !empty($itemRejectionReason) 
+                    ? $itemRejectionReason 
+                    : ($orderItem->rejection_reason ?: $request->correction_reason);
+            }
+
+            $orderItem->update($updateData);
         }
 
         // Consume the permission and clear the note

@@ -36,6 +36,34 @@ class ProductVariation extends Model
     }
 
     /**
+     * Get effective base carton price for a dealer after subtracting Special Discount.
+     *
+     * @param  \App\Models\Customer|int|null  $customer
+     * @return float
+     */
+    public function getEffectiveBasePriceForDealer($customer = null)
+    {
+        $base = $this->base_price;
+        $special = $this->getSpecialDiscountForDealer($customer);
+        if ($special !== null && $special > 0) {
+            return (float) ($base - ($base * $special / 100));
+        }
+        return (float) $base;
+    }
+
+    /**
+     * Get effective base piece price for a dealer after subtracting Special Discount.
+     *
+     * @param  \App\Models\Customer|int|null  $customer
+     * @return float
+     */
+    public function getEffectiveBasePiecePriceForDealer($customer = null)
+    {
+        $pieces = max(1, (int) ($this->total_pieces ?? 1));
+        return (float) ($this->getEffectiveBasePriceForDealer($customer) / $pieces);
+    }
+
+    /**
      * Get the visible Dealer Discount percentage for a specific dealer on this variation.
      * Falls back to product/category dealer discount if not explicitly overridden on this variation.
      *

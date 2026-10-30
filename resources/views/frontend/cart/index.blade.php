@@ -44,18 +44,72 @@
                     @foreach($cart as $cartKey => $item)
                         @php
                             $productId = $item['product_id'] ?? $cartKey;
-                            $product = \App\Models\Product::find($productId);
+                            $product = \App\Models\Product::with('variations')->find($productId);
                             
+                            // Find matching variation for this cart item
+                            $variation = null;
+                            if ($product) {
+                                if (!empty($item['variation_id'])) {
+                                    $variation = $product->variations->find($item['variation_id']);
+                                }
+                                if (!$variation && (!empty($item['size']) || !empty($item['thickness']) || !empty($item['color']))) {
+                                    $variation = $product->variations
+                                        ->where('size', $item['size'] ?? null)
+                                        ->where('thickness', $item['thickness'] ?? null)
+                                        ->where('color', $item['color'] ?? null)
+                                        ->first();
+                                }
+                                if (!$variation && $product->variations->isNotEmpty()) {
+                                    $variation = $isB2B && $customer 
+                                        ? ($product->variations->first(function($v) use ($customer) {
+                                            return ($v->getDealerDiscountForDealer($customer) > 0) || ($v->getSpecialDiscountForDealer($customer) > 0);
+                                        }) ?? $product->variations->first())
+                                        : $product->variations->first();
+                                }
+                            }
+
                             // Use session price as the ACTUAL price to pay
                             $unitToPay = $item['price'];
-                            // Use original_price from session if available, fallback to product price
-                            $unitBase = $item['original_price'] ?? ($product ? $product->price : $item['price']);
+
+                            // Resolve GST percentage: use session if > 0, else variation, else product
+                            $gstPercentage = !empty($item['gst_percentage']) && $item['gst_percentage'] > 0 
+                                ? (float)$item['gst_percentage'] 
+                                : ($variation ? (float)$variation->gst_percentage : (float)($product ? $product->gst_percentage : 0));
+                            if ($gstPercentage <= 0 && $variation) {
+                                $gstPercentage = 18.0;
+                            }
+
+                            // Base Price resolution (with Special Discount applied for B2B)
+                            $defaultBasePrice = $variation 
+                                ? ($isB2B && $customer ? $variation->getEffectiveBasePriceForDealer($customer) : ($variation->piece_price * $variation->total_pieces))
+                                : ($product ? ($isB2B && $customer ? $product->getEffectiveBasePriceForDealer($customer) : $product->price) : $item['price']);
+
+                            $unitBase = !empty($item['original_price']) && $item['original_price'] > 0
+                                ? $item['original_price']
+                                : $defaultBasePrice;
+
+                            // If B2B dealer and discount was missing or not computed on unitBase:
+                            if ($isB2B && $customer) {
+                                $dealerDisc = $variation 
+                                    ? $variation->getDealerDiscountForDealer($customer) 
+                                    : ($product ? $product->getB2BDiscountPercentage($customer) : 0);
+
+                                $specialDisc = $variation ? $variation->getSpecialDiscountForDealer($customer) : null;
+                                
+                                if ($unitBase <= $unitToPay && $dealerDisc > 0) {
+                                    $effBase = $defaultBasePrice;
+                                    if ($specialDisc !== null && $specialDisc > 0) {
+                                        $effBase = $defaultBasePrice - ($defaultBasePrice * $specialDisc / 100);
+                                    }
+                                    $unitBase = $effBase;
+                                    $unitToPay = $effBase - ($effBase * $dealerDisc / 100);
+                                }
+                            }
                             
                             $itemBaseTotal = $unitBase * $item['quantity'];
                             $itemDiscountedTotal = $unitToPay * $item['quantity'];
-                            $itemDiscountOnly = $itemBaseTotal - $itemDiscountedTotal;
+                            $itemDiscountOnly = max(0, $itemBaseTotal - $itemDiscountedTotal);
                             
-                            $gstPercentage = $item['gst_percentage'] ?? ($product ? $product->gst_percentage : 0);
                             $itemGst = $itemDiscountedTotal * ($gstPercentage / 100);
                             $itemFinalTotal = $itemDiscountedTotal + $itemGst;
 
@@ -171,7 +225,7 @@
                     
                     @if($totalDiscount > 0)
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; color: #059669;">
-                        <span style="font-weight: 600;">Dealer Discount:</span>
+                        <span style="font-weight: 600;">Special Discount:</span>
                         <span style="font-weight: 600;">- ₹{{ number_format($totalDiscount, 2) }}</span>
                     </div>
                     @endif

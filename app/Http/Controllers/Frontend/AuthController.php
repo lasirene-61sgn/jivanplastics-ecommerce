@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -39,8 +40,12 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             
-            // Check customer type and redirect accordingly
+            // Check customer type and record login
             $customer = Customer::where('email', Auth::user()->email)->first();
+            if ($customer) {
+                $customer->recordLogin('Web', $request);
+            }
+
             if ($customer && $customer->customer_type === 'dealer') {
                 return redirect()->intended('/b2b/dashboard');
             }
@@ -95,6 +100,7 @@ class AuthController extends Controller
         ]);
         
         Auth::login($user);
+        $customer->recordLogin('Registration', $request);
         
         // Redirect based on customer type
         if ($request->customer_type === 'dealer') {
@@ -112,6 +118,25 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        if ($user) {
+            $customer = Customer::where('email', $user->email)->first();
+            if ($customer) {
+                ActivityLog::create([
+                    'customer_id' => $customer->id,
+                    'user_type' => $customer->customer_type === 'dealer' ? 'b2b' : 'b2c',
+                    'action' => 'logout',
+                    'model_type' => 'Customer',
+                    'model_id' => $customer->id,
+                    'details' => [
+                        'name' => $customer->name,
+                        'email' => $customer->email,
+                        'company_name' => $customer->company_name,
+                    ]
+                ]);
+            }
+        }
+
         Auth::logout();
         
         $request->session()->invalidate();

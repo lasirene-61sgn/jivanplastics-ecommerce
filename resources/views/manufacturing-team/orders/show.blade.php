@@ -250,6 +250,36 @@
             border: 1px solid #bee5eb;
         }
 
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .rejection-badge-box {
+            margin-top: 6px;
+            padding: 6px 10px;
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #c53030;
+            text-align: left;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .rejection-badge-title {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            color: #9b2c2c;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+        }
+
         address {
             font-style: normal;
             line-height: 1.6;
@@ -296,6 +326,61 @@
         @if(session('info'))
             <div class="alert alert-info">
                 {{ session('info') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger" style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">❌</span>
+                <div>{{ session('error') }}</div>
+            </div>
+        @endif
+
+        @if(isset($errors) && $errors->any())
+            <div class="alert alert-danger">
+                <strong>Please correct the following errors:</strong>
+                <ul style="margin: 8px 0 0 20px;">
+                    @foreach($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @php
+            $rejectedItemsList = $order->items->where('status', 'accepted')->filter(function($i) {
+                return $i->rejected_pieces > 0 || !empty($i->rejection_reason);
+            });
+        @endphp
+        @if($rejectedItemsList->isNotEmpty())
+            <div class="alert alert-danger" style="background: #fff5f5; border: 1px solid #fecaca; border-left: 6px solid #dc3545; border-radius: 8px; padding: 16px; margin-bottom: 25px;">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="font-size: 24px; line-height: 1;">⚠️</span>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 6px 0; color: #991b1b; font-size: 16px; font-weight: 700;">Rejection Logged For This Order</h4>
+                        <p style="margin: 0 0 10px 0; color: #7f1d1d; font-size: 13px;">The following items have rejected quantities and reasons recorded:</p>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            @foreach($rejectedItemsList as $rejItem)
+                                <div style="background: white; border: 1px solid #fca5a5; border-radius: 6px; padding: 10px 14px; font-size: 13px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                                        <strong style="color: #1f2937;">{{ $rejItem->product_name }}</strong>
+                                        <span style="background: #fee2e2; color: #b91c1c; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 12px;">
+                                            ❌ {{ $rejItem->rejected_pieces }} pcs rejected
+                                            @if($rejItem->per_unit_pieces > 0)
+                                                ({{ number_format($rejItem->rejected_pieces / $rejItem->per_unit_pieces, 2) }} units)
+                                            @endif
+                                        </span>
+                                    </div>
+                                    @if($rejItem->rejection_reason)
+                                    <div style="margin-top: 6px; font-size: 12px; color: #b91c1c; background: #fff1f2; padding: 6px 10px; border-radius: 4px; border: 1px solid #fecdd3;">
+                                        <strong>Rejection Message:</strong> {{ $rejItem->rejection_reason }}
+                                    </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
             </div>
         @endif
         
@@ -426,13 +511,33 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td style="color: #dc3545;">
-                                    {{ $item->rejected_pieces }} pcs
-                                    <div style="font-size: 11px; color: #888; font-style: italic;">
-                                        @if($item->per_unit_pieces > 0)
-                                            = {{ number_format($item->rejected_pieces / $item->per_unit_pieces, 2) }} units
+                                <td style="color: #dc3545; vertical-align: top;">
+                                    @if($item->rejected_pieces > 0)
+                                        <strong>{{ $item->rejected_pieces }} pcs</strong>
+                                        <div style="font-size: 11px; color: #888; font-style: italic;">
+                                            @if($item->per_unit_pieces > 0)
+                                                = {{ number_format($item->rejected_pieces / $item->per_unit_pieces, 2) }} units
+                                            @endif
+                                        </div>
+                                        @if($item->rejection_reason)
+                                            <div class="rejection-badge-box">
+                                                <div class="rejection-badge-title">
+                                                    <span>⚠️ Reason:</span>
+                                                </div>
+                                                <div>{{ $item->rejection_reason }}</div>
+                                            </div>
                                         @endif
-                                    </div>
+                                    @elseif(!empty($item->rejection_reason))
+                                        <span style="color: #666; font-weight: 500;">0 pcs</span>
+                                        <div class="rejection-badge-box">
+                                            <div class="rejection-badge-title">
+                                                <span>⚠️ Reason:</span>
+                                            </div>
+                                            <div>{{ $item->rejection_reason }}</div>
+                                        </div>
+                                    @else
+                                        <span style="color: #aaa;">0 pcs</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @if($item->manufacturing_pending_pieces > 0)
@@ -460,7 +565,7 @@
         <div class="card">
             <h3 class="card-title">Log Manufacturing Progress</h3>
             @if($order->manufacturing_status == 'processing')
-                <form action="{{ route('manufacturing-team.orders.partial-complete', $order) }}" method="POST">
+                <form action="{{ route('manufacturing-team.orders.partial-complete', $order) }}" method="POST" id="mfgProgressForm">
                     @csrf
                     @method('PUT')
                     <div class="form-group">
@@ -470,15 +575,15 @@
                             @php
                                 $perUnit = max($item->per_unit_pieces ?? 1, 1);
                             @endphp
-                            <div class="form-group" style="background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <div class="form-group mfg-item-card" id="mfg_card_{{ $item->id }}" data-item-id="{{ $item->id }}" data-pending="{{ $item->manufacturing_pending_pieces }}" data-per-unit="{{ $perUnit }}" data-name="{{ $item->product_name }}" style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 18px; transition: all 0.3s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                                     <div>
-                                        <strong style="color: #333; font-size: 15px;">{{ $item->product_name }}</strong>
+                                        <strong style="color: #1f2937; font-size: 15px;">{{ $item->product_name }}</strong>
                                         <div style="margin-top: 3px;">
                                             <span class="unit-badge">1 Unit = {{ $perUnit }} Pcs</span>
                                         </div>
                                         @if($item->size || $item->thickness || $item->color)
-                                            <span style="font-size: 10px; color: #4338ca; display: block; text-transform: uppercase; margin-top: 3px;">
+                                            <span style="font-size: 10px; color: #4338ca; display: block; text-transform: uppercase; margin-top: 4px; font-weight: 600;">
                                                 @if($item->size) Size: {{ $item->size }} @endif
                                                 @if($item->thickness) | Thk: {{ $item->thickness }} @endif
                                                 @if($item->color) | Color: {{ $item->color }} @endif
@@ -486,66 +591,347 @@
                                         @endif
                                     </div>
                                     <div style="text-align: right;">
-                                        <span style="color: #666; font-size: 13px;">
-                                            Pending: <strong style="color: #e67e22;">{{ $item->manufacturing_pending_pieces }} pcs</strong>
-                                        </span>
-                                        <div style="font-size: 11px; color: #888; font-style: italic;">
-                                            (= {{ number_format($item->manufacturing_pending_pieces / $perUnit, 2) }} units)
+                                        <div style="font-size: 12px; color: #64748b;">
+                                            Ordered: <strong>{{ $item->total_pieces }} pcs</strong> | Made: <strong style="color: #16a34a;">{{ $item->manufactured_pieces }}</strong> | Rej: <strong style="color: #dc2626;">{{ $item->rejected_pieces }}</strong>
+                                        </div>
+                                        <div style="margin-top: 4px;">
+                                            <span style="color: #475569; font-size: 13px;">
+                                                Pending to log: <strong style="color: #ea580c; font-size: 15px;" id="pending_val_{{ $item->id }}">{{ $item->manufacturing_pending_pieces }} pcs</strong>
+                                            </span>
+                                            <div style="font-size: 11px; color: #888; font-style: italic;">
+                                                (= {{ number_format($item->manufacturing_pending_pieces / $perUnit, 2) }} units)
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
+                                @if($item->rejection_reason)
+                                    <div style="margin-bottom: 12px; font-size: 12px; color: #b91c1c; background: #fff5f5; border: 1px dashed #fca5a5; border-radius: 6px; padding: 6px 10px;">
+                                        <strong>Previous Rejection Message:</strong> {{ $item->rejection_reason }}
+                                    </div>
+                                @endif
+
                                 <div style="display: flex; gap: 15px;">
                                     <div style="flex: 1;">
-                                        <label style="font-size: 12px; color: #28a745; font-weight: 600;">Completed Pieces</label>
+                                        <label style="font-size: 12px; color: #16a34a; font-weight: 700; display: block; margin-bottom: 4px;">
+                                            ✅ Completed Pieces
+                                        </label>
                                         <input type="number" 
                                                name="completed_pieces[{{ $item->id }}]" 
                                                id="completed_{{ $item->id }}"
-                                               class="form-control" 
+                                               class="form-control mfg-comp-input" 
                                                min="0" 
                                                max="{{ $item->manufacturing_pending_pieces }}" 
                                                value="0"
                                                placeholder="Pieces"
-                                               oninput="document.getElementById('comp_unit_{{ $item->id }}').innerText = (this.value / {{ $perUnit }}).toFixed(2)">
-                                        <small style="color: #888; display: block; margin-top: 3px;">
+                                               data-item-id="{{ $item->id }}"
+                                               style="font-size: 16px; font-weight: 600;">
+                                        <small style="color: #888; display: block; margin-top: 4px;">
                                             = <span id="comp_unit_{{ $item->id }}">0.00</span> units
                                         </small>
                                     </div>
                                     <div style="flex: 1;">
-                                        <label style="font-size: 12px; color: #dc3545; font-weight: 600;">Rejected Pieces</label>
+                                        <label style="font-size: 12px; color: #dc2626; font-weight: 700; display: block; margin-bottom: 4px;">
+                                            ❌ Rejected Pieces
+                                        </label>
                                         <input type="number" 
                                                name="rejected_pieces[{{ $item->id }}]" 
                                                id="rejected_{{ $item->id }}"
-                                               class="form-control" 
+                                               class="form-control mfg-rej-input" 
                                                min="0" 
                                                max="{{ $item->manufacturing_pending_pieces }}" 
                                                value="0"
                                                placeholder="Pieces"
-                                               style="border-color: #dc3545;"
-                                               oninput="document.getElementById('rej_unit_{{ $item->id }}').innerText = (this.value / {{ $perUnit }}).toFixed(2)">
-                                        <small style="color: #888; display: block; margin-top: 3px;">
+                                               data-item-id="{{ $item->id }}"
+                                               style="border-color: #f87171; font-size: 16px; font-weight: 600;">
+                                        <small style="color: #888; display: block; margin-top: 4px;">
                                             = <span id="rej_unit_{{ $item->id }}">0.00</span> units
                                         </small>
                                     </div>
                                 </div>
-                                <div style="margin-top: 10px;">
+
+                                {{-- Live dynamic alert / status badge --}}
+                                <div id="live_status_{{ $item->id }}" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px; line-height: 1.4;"></div>
+
+                                {{-- Rejection reason group --}}
+                                <div id="rejection_group_{{ $item->id }}" style="margin-top: 10px;">
+                                    <label style="font-size: 12px; color: #dc2626; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <span>
+                                            ⚠️ Rejection Message / Reason 
+                                            <span id="rej_star_{{ $item->id }}" style="display: none; color: #dc2626;">* (Required for rejected pieces)</span>
+                                        </span>
+                                    </label>
                                     <input type="text" 
                                            name="rejection_reasons[{{ $item->id }}]" 
-                                           class="form-control" 
-                                           placeholder="Reason for rejection (optional)"
-                                           style="font-size: 14px;">
+                                           id="rejection_reason_{{ $item->id }}"
+                                           class="form-control mfg-reason-input" 
+                                           placeholder="Enter reason why pieces were rejected (e.g. Dimensions incorrect, Cracks, Surface defect...)"
+                                           data-item-id="{{ $item->id }}"
+                                           style="font-size: 13px; border-color: #cbd5e1;">
                                 </div>
-                                <small style="color: #888; display: block; margin-top: 5px;">
-                                    Total pieces (Completed + Rejected) cannot exceed pending pieces ({{ $item->manufacturing_pending_pieces }} pcs).
-                                </small>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px; color: #64748b;">
+                                    <span>Total to process cannot exceed pending pieces ({{ $item->manufacturing_pending_pieces }} pcs).</span>
+                                    <span id="sum_counter_{{ $item->id }}" style="font-weight: 600; color: #475569;">Sum: 0 / {{ $item->manufacturing_pending_pieces }} pcs</span>
+                                </div>
                             </div>
                         @endif
                         @endforeach
                     </div>
-                    <button type="submit" class="btn btn-success" style="width: 100%; padding: 15px;">Submit Manufacturing Progress (In Pieces)</button>
+                    <button type="submit" class="btn btn-success" id="mfgSubmitBtn" style="width: 100%; padding: 15px; font-size: 16px;">Submit Manufacturing Progress (In Pieces)</button>
                 </form>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const form = document.getElementById('mfgProgressForm');
+                    const submitBtn = document.getElementById('mfgSubmitBtn');
+                    const cards = document.querySelectorAll('.mfg-item-card');
+
+                    function checkItem(card) {
+                        const itemId = card.dataset.itemId;
+                        const pending = parseInt(card.dataset.pending, 10) || 0;
+                        const perUnit = parseFloat(card.dataset.perUnit) || 1;
+                        const name = card.dataset.name;
+
+                        const compInput = document.getElementById('completed_' + itemId);
+                        const rejInput = document.getElementById('rejected_' + itemId);
+                        const reasonInput = document.getElementById('rejection_reason_' + itemId);
+                        const statusBox = document.getElementById('live_status_' + itemId);
+                        const star = document.getElementById('rej_star_' + itemId);
+                        const sumCounter = document.getElementById('sum_counter_' + itemId);
+                        const compUnitSpan = document.getElementById('comp_unit_' + itemId);
+                        const rejUnitSpan = document.getElementById('rej_unit_' + itemId);
+
+                        const compVal = parseInt(compInput.value, 10) || 0;
+                        const rejVal = parseInt(rejInput.value, 10) || 0;
+                        const total = compVal + rejVal;
+
+                        if (compUnitSpan) compUnitSpan.innerText = (compVal / perUnit).toFixed(2);
+                        if (rejUnitSpan) rejUnitSpan.innerText = (rejVal / perUnit).toFixed(2);
+                        if (sumCounter) sumCounter.innerText = 'Sum: ' + total + ' / ' + pending + ' pcs';
+
+                        // Check rejection reason requirement
+                        if (rejVal > 0) {
+                            star.style.display = 'inline';
+                            reasonInput.style.borderColor = '#dc2626';
+                            if (!reasonInput.value.trim()) {
+                                reasonInput.style.backgroundColor = '#fff5f5';
+                            } else {
+                                reasonInput.style.backgroundColor = '#ffffff';
+                            }
+                        } else {
+                            star.style.display = 'none';
+                            reasonInput.style.borderColor = '#cbd5e1';
+                            reasonInput.style.backgroundColor = '#ffffff';
+                        }
+
+                        // Check if sum exceeds pending
+                        if (total > pending) {
+                            card.style.borderColor = '#ef4444';
+                            card.style.backgroundColor = '#fef2f2';
+                            compInput.style.borderColor = '#ef4444';
+                            rejInput.style.borderColor = '#ef4444';
+                            statusBox.style.display = 'block';
+                            statusBox.style.backgroundColor = '#fee2e2';
+                            statusBox.style.border = '1px solid #f87171';
+                            statusBox.style.color = '#991b1b';
+
+                            if (compVal >= pending && rejVal > 0) {
+                                statusBox.innerHTML = '⚠️ <strong>Exceeded!</strong> You have entered <strong>' + compVal + ' completed</strong> pieces (max is ' + pending + '). You cannot also add <strong>' + rejVal + ' rejected</strong> pieces. If ' + rejVal + ' pieces were rejected, reduce completed to <strong>' + Math.max(0, pending - rejVal) + '</strong>.';
+                            } else {
+                                statusBox.innerHTML = '⚠️ <strong>Exceeded!</strong> Completed (' + compVal + ') + Rejected (' + rejVal + ') = <strong>' + total + ' pcs</strong>, which exceeds ' + pending + ' pending pieces by <strong>' + (total - pending) + ' pcs</strong>! Total cannot exceed ' + pending + ' pcs.';
+                            }
+                            return { valid: false, error: 'Quantities for "' + name + '" exceed pending pieces (' + total + ' > ' + pending + ').' };
+                        } else if (total === pending && pending > 0) {
+                            card.style.borderColor = '#86efac';
+                            card.style.backgroundColor = '#f0fdf4';
+                            compInput.style.borderColor = '#22c55e';
+                            rejInput.style.borderColor = rejVal > 0 ? '#ef4444' : '#cbd5e1';
+                            statusBox.style.display = 'block';
+                            statusBox.style.backgroundColor = '#dcfce7';
+                            statusBox.style.border = '1px solid #86efac';
+                            statusBox.style.color = '#166534';
+                            statusBox.innerHTML = '✅ <strong>Full Batch:</strong> All ' + pending + ' pending pieces accounted for (' + compVal + ' completed, ' + rejVal + ' rejected). This item will be 100% finished!';
+                        } else if (total > 0) {
+                            card.style.borderColor = '#93c5fd';
+                            card.style.backgroundColor = '#f8fafc';
+                            compInput.style.borderColor = '#3b82f6';
+                            rejInput.style.borderColor = rejVal > 0 ? '#ef4444' : '#cbd5e1';
+                            statusBox.style.display = 'block';
+                            statusBox.style.backgroundColor = '#eff6ff';
+                            statusBox.style.border = '1px solid #bfdbfe';
+                            statusBox.style.color = '#1e40af';
+                            statusBox.innerHTML = 'ℹ️ Logging <strong>' + total + ' pcs</strong> (' + compVal + ' completed, ' + rejVal + ' rejected). <strong>' + (pending - total) + ' pcs</strong> will remain pending.';
+                        } else {
+                            card.style.borderColor = '#e2e8f0';
+                            card.style.backgroundColor = '#fdfdfd';
+                            compInput.style.borderColor = '#cbd5e1';
+                            rejInput.style.borderColor = '#f87171';
+                            statusBox.style.display = 'none';
+                        }
+
+                        if (rejVal > 0 && !reasonInput.value.trim()) {
+                            return { valid: false, error: 'Please enter a rejection message for "' + name + '".', focusInput: reasonInput };
+                        }
+
+                        return { valid: true };
+                    }
+
+                    function checkAll() {
+                        let allValid = true;
+                        let anyInput = false;
+                        let firstError = null;
+
+                        cards.forEach(function(card) {
+                            const compInput = card.querySelector('.mfg-comp-input');
+                            const rejInput = card.querySelector('.mfg-rej-input');
+                            const compVal = parseInt(compInput.value, 10) || 0;
+                            const rejVal = parseInt(rejInput.value, 10) || 0;
+                            if (compVal > 0 || rejVal > 0) {
+                                anyInput = true;
+                            }
+                            const res = checkItem(card);
+                            if (!res.valid) {
+                                allValid = false;
+                                if (!firstError) firstError = res;
+                            }
+                        });
+
+                        if (submitBtn) {
+                            if (!allValid) {
+                                submitBtn.disabled = true;
+                                submitBtn.style.opacity = '0.6';
+                                submitBtn.style.cursor = 'not-allowed';
+                            } else {
+                                submitBtn.disabled = false;
+                                submitBtn.style.opacity = '1';
+                                submitBtn.style.cursor = 'pointer';
+                            }
+                        }
+
+                        return { allValid: allValid, anyInput: anyInput, firstError: firstError };
+                    }
+
+                    cards.forEach(function(card) {
+                        const compInput = card.querySelector('.mfg-comp-input');
+                        const rejInput = card.querySelector('.mfg-rej-input');
+                        const reasonInput = card.querySelector('.mfg-reason-input');
+
+                        if (compInput) compInput.addEventListener('input', checkAll);
+                        if (rejInput) rejInput.addEventListener('input', checkAll);
+                        if (reasonInput) reasonInput.addEventListener('input', checkAll);
+                    });
+
+                    if (form) {
+                        form.addEventListener('submit', function(e) {
+                            const status = checkAll();
+                            if (!status.anyInput) {
+                                e.preventDefault();
+                                alert('Please enter completed or rejected pieces (greater than 0) for at least one item before submitting.');
+                                return false;
+                            }
+                            if (!status.allValid) {
+                                e.preventDefault();
+                                alert(status.firstError ? status.firstError.error : 'Please resolve validation errors before submitting.');
+                                if (status.firstError && status.firstError.focusInput) {
+                                    status.firstError.focusInput.focus();
+                                }
+                                return false;
+                            }
+                        });
+                    }
+
+                    // Initial check
+                    checkAll();
+                });
+                </script>
             @else
                 <p style="color: #666; font-style: italic;">Order must be in 'Processing' status to log manufacturing progress.</p>
+            @endif
+        </div>
+
+        {{-- ===== PRODUCTION & REJECTION HISTORY LOG CARD ===== --}}
+        <div class="card">
+            <h3 class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📋 Production & Rejection History Log</span>
+                <span style="font-size: 12px; color: #666; font-weight: normal;">
+                    {{ $order->productionLogs ? $order->productionLogs->count() : 0 }} entry(ies) recorded
+                </span>
+            </h3>
+            @if($order->productionLogs && $order->productionLogs->count() > 0)
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time (IST)</th>
+                                <th>Item Details</th>
+                                <th>Completed</th>
+                                <th>Rejected</th>
+                                <th>Rejection Message / Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($order->productionLogs->sortByDesc('created_at') as $log)
+                                <tr>
+                                    <td style="white-space: nowrap; font-size: 13px; color: #555;">
+                                        {{ $log->created_at ? $log->created_at->timezone('Asia/Kolkata')->format('M d, Y h:i A') : 'N/A' }}
+                                    </td>
+                                    <td>
+                                        <strong>{{ $log->orderItem->product_name ?? 'Item #' . $log->order_item_id }}</strong>
+                                        @if($log->orderItem)
+                                            <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                                                SKU: {{ $log->orderItem->product_sku }}
+                                                @if($log->orderItem->size || $log->orderItem->thickness || $log->orderItem->color)
+                                                    <span style="font-size: 10px; color: #4338ca; text-transform: uppercase; margin-left: 5px;">
+                                                        @if($log->orderItem->size) Size: {{ $log->orderItem->size }} @endif
+                                                        @if($log->orderItem->thickness) | Thk: {{ $log->orderItem->thickness }} @endif
+                                                        @if($log->orderItem->color) | Color: {{ $log->orderItem->color }} @endif
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td style="color: #28a745; font-weight: 700;">
+                                        @if($log->pieces_completed > 0)
+                                            +{{ $log->pieces_completed }} pcs
+                                            @if($log->orderItem && $log->orderItem->per_unit_pieces > 0)
+                                                <div style="font-size: 11px; color: #888; font-weight: normal;">
+                                                    (= {{ number_format($log->pieces_completed / $log->orderItem->per_unit_pieces, 2) }} units)
+                                                </div>
+                                            @endif
+                                        @else
+                                            <span style="color: #aaa; font-weight: normal;">0 pcs</span>
+                                        @endif
+                                    </td>
+                                    <td style="color: #dc3545; font-weight: 700;">
+                                        @if($log->pieces_rejected > 0)
+                                            +{{ $log->pieces_rejected }} pcs
+                                            @if($log->orderItem && $log->orderItem->per_unit_pieces > 0)
+                                                <div style="font-size: 11px; color: #888; font-style: italic; font-weight: normal;">
+                                                    (= {{ number_format($log->pieces_rejected / $log->orderItem->per_unit_pieces, 2) }} units)
+                                                </div>
+                                            @endif
+                                        @else
+                                            <span style="color: #aaa; font-weight: normal;">0 pcs</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($log->pieces_rejected > 0 || !empty($log->rejection_reason))
+                                            <div style="background: #fff5f5; border: 1px solid #fecaca; border-left: 3px solid #dc3545; border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #b91c1c;">
+                                                <strong style="display: block; font-size: 10px; text-transform: uppercase; color: #991b1b;">Rejection Message:</strong>
+                                                {{ $log->rejection_reason ?: 'No message recorded' }}
+                                            </div>
+                                        @else
+                                            <span style="color: #aaa; font-style: italic; font-size: 12px;">— None —</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <p style="color: #666; font-style: italic; font-size: 13px; margin: 10px 0;">No production entries have been logged for this order yet.</p>
             @endif
         </div>
 
@@ -628,6 +1014,17 @@
                                     = <span id="corr_rej_{{ $item->id }}">{{ number_format($item->rejected_pieces / $perUnitCorr, 2) }}</span> units
                                 </small>
                             </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label style="font-size: 12px; color: #dc3545; font-weight: 600;">
+                                Rejection Message / Reason (if rejected pieces > 0)
+                            </label>
+                            <input type="text" 
+                                   name="corrected_rejection_reasons[{{ $item->id }}]" 
+                                   class="form-control" 
+                                   value="{{ $item->rejection_reason }}"
+                                   placeholder="Enter or update rejection message..."
+                                   style="font-size: 13px;">
                         </div>
                     </div>
                     @endforeach

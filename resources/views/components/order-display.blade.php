@@ -66,7 +66,7 @@
                                 Rate: ₹{{ number_format($item->piece_price, 2) }} / piece
                                 @if($item->discount_amount > 0)
                                     <span style="font-size: 0.7rem; color: #059669; font-weight: 600; margin-left: 0.5rem; background-color: #d1fae5; padding: 1px 4px; border-radius: 3px;">
-                                        Dealer Disc: -₹{{ number_format($item->discount_amount, 2) }}
+                                        Special Disc: -₹{{ number_format($item->discount_amount, 2) }}
                                     </span>
                                 @endif
                             </p>
@@ -237,7 +237,7 @@
                         <span>₹{{ number_format($grossSubtotal, 2) }}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 2px; color: #059669; font-weight: 700;">
-                        <span>Dealer Discount:</span>
+                        <span>Special Discount:</span>
                         <span>-₹{{ number_format($dealerDiscount, 2) }}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 2px; color: #334155; font-weight: 700; border-top: 1px dashed #cbd5e1; padding-top: 2px;">

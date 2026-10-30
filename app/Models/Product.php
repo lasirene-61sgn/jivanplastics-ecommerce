@@ -267,6 +267,38 @@ class Product extends Model
     }
 
     /**
+     * Get effective base carton price for a dealer after subtracting Special Discount.
+     *
+     * @param  \App\Models\Customer|null  $customer
+     * @return float
+     */
+    public function getEffectiveBasePriceForDealer($customer = null)
+    {
+        $firstVariation = $this->variations ? $this->variations->first() : null;
+        if ($firstVariation) {
+            return $firstVariation->getEffectiveBasePriceForDealer($customer);
+        }
+        $base = (float) $this->price;
+        $special = $this->special_discount ?? 0;
+        if ($special > 0) {
+            return (float) ($base - ($base * $special / 100));
+        }
+        return $base;
+    }
+
+    /**
+     * Get effective base piece price for a dealer after subtracting Special Discount.
+     *
+     * @param  \App\Models\Customer|null  $customer
+     * @return float
+     */
+    public function getEffectiveBasePiecePriceForDealer($customer = null)
+    {
+        $pieces = max(1, (int) ($this->per_quantity_pieces ?? 1));
+        return (float) ($this->getEffectiveBasePriceForDealer($customer) / $pieces);
+    }
+
+    /**
      * Calculate the price including GST.
      *
      * @return float

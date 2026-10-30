@@ -490,7 +490,13 @@ class B2BDashboardController extends Controller
         // Get active rewards
         $rewards = Reward::where('is_active', true)->with('product')->get();
 
-        return view('frontend.b2b.rewards', compact('customer', 'rewards'));
+        // Get customer's claimed rewards for tracking
+        $myClaims = RewardClaim::where('customer_id', $customer->id)
+            ->with(['reward.product', 'invoice'])
+            ->latest()
+            ->get();
+
+        return view('frontend.b2b.rewards', compact('customer', 'rewards', 'myClaims'));
     }
 
     /**

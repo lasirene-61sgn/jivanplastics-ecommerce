@@ -166,11 +166,15 @@
                             @php
                                 $product = \App\Models\Product::find($item['product_id'] ?? $id);
                                 $unitToPay = $item['price'];
-                                $unitBase = $item['original_price'] ?? ($product ? $product->price : $item['price']);
+                                $variation = null;
+                                if (!empty($item['variation_id'])) {
+                                    $variation = \App\Models\ProductVariation::find($item['variation_id']);
+                                }
+                                $unitBase = $item['original_price'] ?? ($variation ? ($customer->customer_type === 'dealer' ? $variation->getEffectiveBasePriceForDealer($customer) : $variation->base_price) : ($product ? ($customer->customer_type === 'dealer' ? $product->getEffectiveBasePriceForDealer($customer) : $product->price) : $item['price']));
                                 
                                 $lineBase = $unitBase * $item['quantity'];
                                 $lineDisc = $unitToPay * $item['quantity'];
-                                $gstPercentage = $item['gst_percentage'] ?? ($product ? $product->gst_percentage : 0);
+                                $gstPercentage = $item['gst_percentage'] ?? ($variation ? $variation->gst_percentage : ($product ? $product->gst_percentage : 0));
                                 $lineGst = $lineDisc * ($gstPercentage / 100);
                             @endphp
                             <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #f9fafb;">
@@ -186,10 +190,11 @@
 
                                     @php
                                         $isItemPieces = isset($item['is_pieces']) && $item['is_pieces'];
+                                        $tempPerUnitPieces = $variation ? $variation->total_pieces : ($product ? $product->per_quantity_pieces : 1);
                                     @endphp
-                                    @if(!$isItemPieces && $product && $product->per_quantity_pieces > 1)
+                                    @if(!$isItemPieces && $tempPerUnitPieces > 1)
                                         <div style="font-size: 0.7rem; color: #4f46e5; font-weight: 600; margin-top: 0.2rem;">
-                                            Rate/pc: ₹{{ number_format($unitToPay / $product->per_quantity_pieces, 2) }}
+                                            Rate/pc: ₹{{ number_format($unitToPay / $tempPerUnitPieces, 2) }}
                                         </div>
                                     @endif
                                 </div>
@@ -211,7 +216,7 @@
                         
                         @if($totalDealerDiscount > 0)
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #059669; font-weight: 600;">
-                            <span>Dealer Discount:</span>
+                            <span>Special Discount:</span>
                             <span>- ₹{{ number_format($totalDealerDiscount, 2) }}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-top: 0.25rem; border-top: 1px dashed #e5e7eb;">

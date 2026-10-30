@@ -46,17 +46,11 @@ class CartController extends Controller
         $cart = session()->get('cart', []);
         
         $productId = $product->id;
-        $requestedQuantity = $request->input('quantity', 1);
+        $requestedQuantity = max(1, (int) $request->input('quantity', 1));
         $size = $request->input('size');
         $thickness = $request->input('thickness');
         $color = $request->input('color');
         $isPieces = $request->input('is_pieces', false);
-        
-        // Generate a unique key for this product + attribute combination
-        $cartKey = $productId;
-        if ($size || $thickness || $color) {
-            $cartKey .= '-' . md5(serialize([$size, $thickness, $color]));
-        }
         
         // Determine if customer is B2B or B2C
         $isB2B = false;
@@ -69,22 +63,55 @@ class CartController extends Controller
             $isB2B = $customer->customer_type === 'dealer';
         }
 
-        // Find variation to know perUnitPieces for MOQ calculation early
-        $variation = $product->variations()
-            ->where(function($q) use ($size) {
-                if (empty($size)) $q->whereNull('size')->orWhere('size', '');
-                else $q->where('size', $size);
-            })
-            ->where(function($q) use ($thickness) {
-                if (empty($thickness)) $q->whereNull('thickness')->orWhere('thickness', '');
-                else $q->where('thickness', $thickness);
-            })
-            ->where(function($q) use ($color) {
-                if (empty($color)) $q->whereNull('color')->orWhere('color', '');
-                else $q->where('color', $color);
-            })
-            ->first();
-            
+        // 1. Find variation by explicit variation_id if provided
+        $variation = null;
+        if ($request->filled('variation_id')) {
+            $variation = $product->variations()->find($request->input('variation_id'));
+        }
+
+        // 2. If not found by variation_id, find by attributes (size, thickness, color)
+        if (!$variation && ($size || $thickness || $color)) {
+            $variation = $product->variations()
+                ->where(function($q) use ($size) {
+                    if (empty($size)) $q->whereNull('size')->orWhere('size', '');
+                    else $q->where('size', $size);
+                })
+                ->where(function($q) use ($thickness) {
+                    if (empty($thickness)) $q->whereNull('thickness')->orWhere('thickness', '');
+                    else $q->where('thickness', $thickness);
+                })
+                ->where(function($q) use ($color) {
+                    if (empty($color)) $q->whereNull('color')->orWhere('color', '');
+                    else $q->where('color', $color);
+                })
+                ->first();
+        }
+
+        // 3. Fallback: if product has variations but none matched or attributes were not passed (e.g. from discounts page)
+        if (!$variation && $product->variations()->exists()) {
+            if ($isB2B && $customer) {
+                // Pick the variation that has dealer discount for this customer, or the first variation
+                $variation = $product->variations->first(function($v) use ($customer) {
+                    return ($v->getDealerDiscountForDealer($customer) > 0) || ($v->getSpecialDiscountForDealer($customer) > 0);
+                }) ?? $product->variations()->first();
+            } else {
+                $variation = $product->variations()->first();
+            }
+        }
+
+        // Sync resolved variation attributes
+        if ($variation) {
+            $size = $variation->size;
+            $thickness = $variation->thickness;
+            $color = $variation->color;
+        }
+
+        // Generate a unique key for this product + attribute combination
+        $cartKey = $productId;
+        if ($size || $thickness || $color) {
+            $cartKey .= '-' . md5(serialize([$size, $thickness, $color]));
+        }
+
         $perUnitPieces = $variation ? $variation->total_pieces : ($product->per_quantity_pieces ?? 1);
         if ($perUnitPieces < 1) $perUnitPieces = 1;
         
@@ -127,6 +154,50 @@ class CartController extends Controller
             return redirect()->back()->with('error', $msg);
         }
         
+        // Use variation price or product price
+        // Note: variation total_price is GST-inclusive as per our admin logic
+        $gstInclusivePrice = $variation ? (float)$variation->total_price : (float)$product->price;
+        $gstPercentage = $variation ? (float)$variation->gst_percentage : (float)($product->gst_percentage ?? 0);
+        
+        // Calculate Base Price (Without GST)
+        if ($variation && $variation->piece_price > 0 && $variation->total_pieces > 0) {
+            $basePriceWithoutGst = (float)($variation->piece_price * $variation->total_pieces);
+        } elseif ($gstPercentage > 0) {
+            $basePriceWithoutGst = $gstInclusivePrice / (1 + ($gstPercentage / 100));
+        } else {
+            $basePriceWithoutGst = $gstInclusivePrice;
+        }
+
+        $actualPrice = $basePriceWithoutGst;
+        $originalPrice = $basePriceWithoutGst;
+
+        if ($isB2B && $customer) {
+            // Special discount silently sets the dealer's base rate
+            $specialDiscount = $variation ? $variation->getSpecialDiscountForDealer($customer) : null;
+            $effectiveBase = $basePriceWithoutGst;
+            if ($specialDiscount !== null && $specialDiscount > 0) {
+                $effectiveBase = $basePriceWithoutGst - ($basePriceWithoutGst * $specialDiscount / 100);
+            }
+
+            // Dealer Discount is the visible discount shown on products, cart, order, and invoice
+            $dealerDiscount = $variation 
+                ? $variation->getDealerDiscountForDealer($customer) 
+                : $product->getB2BDiscountPercentage($customer);
+
+            if ($dealerDiscount > 0) {
+                $originalPrice = $effectiveBase;
+                $actualPrice = $effectiveBase - ($effectiveBase * $dealerDiscount / 100);
+            } else {
+                $originalPrice = $effectiveBase;
+                $actualPrice = $effectiveBase;
+            }
+        }
+
+        if ($isPieces) {
+            $actualPrice = $actualPrice / $perUnitPieces;
+            $originalPrice = $originalPrice / $perUnitPieces;
+        }
+
         $isExisting = isset($cart[$cartKey]);
 
         if ($isExisting) {
@@ -155,64 +226,17 @@ class CartController extends Controller
             }
             
             $cart[$cartKey]['quantity'] = $newQuantity;
+            $cart[$cartKey]['price'] = $actualPrice;
+            $cart[$cartKey]['original_price'] = $originalPrice;
+            $cart[$cartKey]['gst_percentage'] = $gstPercentage;
+            $cart[$cartKey]['variation_id'] = $variation ? $variation->id : ($cart[$cartKey]['variation_id'] ?? null);
+            $cart[$cartKey]['size'] = $size;
+            $cart[$cartKey]['thickness'] = $thickness;
+            $cart[$cartKey]['color'] = $color;
         } else {
-            // Find matching variation for price calculation
-            $variation = $product->variations()
-                ->where(function($q) use ($size) {
-                    if (empty($size)) $q->whereNull('size')->orWhere('size', '');
-                    else $q->where('size', $size);
-                })
-                ->where(function($q) use ($thickness) {
-                    if (empty($thickness)) $q->whereNull('thickness')->orWhere('thickness', '');
-                    else $q->where('thickness', $thickness);
-                })
-                ->where(function($q) use ($color) {
-                    if (empty($color)) $q->whereNull('color')->orWhere('color', '');
-                    else $q->where('color', $color);
-                })
-                ->first();
-
-            // Use variation price or product price
-            // Note: variation total_price is GST-inclusive as per our admin logic
-            $gstInclusivePrice = $variation ? $variation->total_price : $product->price;
-            $gstPercentage = $variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0);
-            
-            // Calculate Base Price (Without GST)
-            $basePriceWithoutGst = $gstInclusivePrice / (1 + ($gstPercentage / 100));
-            
-            $actualPrice = $basePriceWithoutGst;
-            $originalPrice = $basePriceWithoutGst;
-
-            if ($isB2B && $customer) {
-                // Special discount silently sets the dealer's base rate
-                $specialDiscount = $variation ? $variation->getSpecialDiscountForDealer($customer) : null;
-                $effectiveBase = $basePriceWithoutGst;
-                if ($specialDiscount !== null && $specialDiscount > 0) {
-                    $effectiveBase = $basePriceWithoutGst - ($basePriceWithoutGst * $specialDiscount / 100);
-                }
-
-                // Dealer Discount is the visible discount shown on products, cart, order, and invoice
-                $dealerDiscount = $variation 
-                    ? $variation->getDealerDiscountForDealer($customer) 
-                    : $product->getB2BDiscountPercentage($customer);
-
-                if ($dealerDiscount > 0) {
-                    $originalPrice = $effectiveBase;
-                    $actualPrice = $effectiveBase - ($effectiveBase * $dealerDiscount / 100);
-                } else {
-                    // If no visible dealer discount, original price equals actual price
-                    $originalPrice = $effectiveBase;
-                    $actualPrice = $effectiveBase;
-                }
-            }
-
-            if ($isPieces) {
-                $actualPrice = $actualPrice / $perUnitPieces;
-                $originalPrice = $originalPrice / $perUnitPieces;
-            }
-
             $cart[$cartKey] = [
                 'product_id' => $productId,
+                'variation_id' => $variation ? $variation->id : null,
                 'name' => $product->name,
                 'price' => $actualPrice, // Base price after dealer discount, before GST
                 'original_price' => $originalPrice,

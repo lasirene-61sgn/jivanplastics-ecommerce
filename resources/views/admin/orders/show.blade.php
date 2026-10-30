@@ -116,7 +116,11 @@
                     </div>
                 </div>
                 {{-- Bulk Actions Bar --}}
-                @if(!in_array($order->status, ['completed', 'cancelled']))
+                @php
+                    $pendingItemsCount = $order->items->where('status', 'pending')->count();
+                    $showBulkActions = !in_array($order->status, ['completed', 'cancelled']) && !$order->manufacturing_team_id && $pendingItemsCount > 0;
+                @endphp
+                @if($showBulkActions)
                 <div class="flex items-center gap-2 flex-wrap">
                     <span id="selected-badge" class="hidden text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
                         <span id="selected-count">0</span> selected
@@ -135,7 +139,7 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50/50 border-b border-slate-200">
-                            @if(!in_array($order->status, ['completed', 'cancelled']))
+                            @if($showBulkActions)
                             <th class="px-4 py-4 text-center w-10">
                                 <input type="checkbox" id="select-all-items" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" onchange="toggleSelectAllItems(this)">
                             </th>
@@ -156,9 +160,13 @@
                     <tbody class="divide-y divide-slate-100">
                         @foreach($order->items as $item)
                         <tr class="hover:bg-slate-50/50 transition-colors {{ $item->status === 'rejected' ? 'bg-rose-50/20' : '' }}">
-                            @if(!in_array($order->status, ['completed', 'cancelled']))
+                            @if($showBulkActions)
                             <td class="px-4 py-5 text-center">
+                                @if($item->status === 'pending')
                                 <input type="checkbox" name="item_ids[]" value="{{ $item->id }}" class="item-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" onchange="updateSelectedItems()">
+                                @else
+                                <span class="text-slate-300 text-xs font-bold">-</span>
+                                @endif
                             </td>
                             @endif
                             <td class="px-6 py-5">
@@ -207,6 +215,18 @@
                                     @if($item->per_unit_pieces > 0)
                                     <span class="text-[10px] text-slate-400 italic font-medium">= {{ number_format($item->rejected_pieces / $item->per_unit_pieces, 2) }} units</span>
                                     @endif
+                                    @if($item->rejection_reason)
+                                    <span class="text-[10px] text-rose-700 bg-rose-100/60 px-2 py-0.5 rounded border border-rose-200 mt-1 max-w-[160px] truncate block" title="{{ $item->rejection_reason }}">
+                                        {{ $item->rejection_reason }}
+                                    </span>
+                                    @endif
+                                </div>
+                                @elseif($item->rejection_reason)
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-slate-400 font-medium text-xs">0 pcs</span>
+                                    <span class="text-[10px] text-rose-700 bg-rose-100/60 px-2 py-0.5 rounded border border-rose-200 mt-1 max-w-[160px] truncate block" title="{{ $item->rejection_reason }}">
+                                        {{ $item->rejection_reason }}
+                                    </span>
                                 </div>
                                 @else
                                 <span class="text-slate-300 font-bold">-</span>
@@ -257,7 +277,7 @@
                             </td>
                             {{-- Action Column --}}
                             <td class="px-6 py-5 text-center whitespace-nowrap">
-                                @if(!in_array($order->status, ['completed', 'cancelled']))
+                                @if(!in_array($order->status, ['completed', 'cancelled']) && !$order->manufacturing_team_id)
                                 <div class="flex items-center justify-center gap-1.5">
                                     @if($item->status === 'pending')
                                     <form action="{{ route('admin.orders.items.status', ['order' => $order->id, 'item' => $item->id]) }}" method="POST" class="inline">

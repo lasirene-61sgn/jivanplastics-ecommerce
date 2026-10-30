@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -51,9 +52,25 @@ class AdminAuthController extends Controller
             if (strpos($ip, ',') !== false) {
                 $ip = explode(',', $ip)[0];
             }
-            $admin->current_login_ip = trim($ip);
+            $cleanIp = trim($ip);
+            $admin->current_login_ip = $cleanIp;
             $admin->last_login_at = now();
             $admin->save();
+
+            // Record login in ActivityLog
+            ActivityLog::create([
+                'admin_id' => $admin->id,
+                'user_type' => 'admin',
+                'action' => 'login',
+                'model_type' => 'Admin',
+                'model_id' => $admin->id,
+                'ip_address' => $cleanIp,
+                'details' => [
+                    'name' => $admin->name,
+                    'email' => $admin->email,
+                    'channel' => 'Admin Panel',
+                ]
+            ]);
 
             return redirect()->intended(route('admin.dashboard'));
         }
@@ -71,6 +88,21 @@ class AdminAuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $admin = Auth::guard('admin')->user();
+        if ($admin) {
+            ActivityLog::create([
+                'admin_id' => $admin->id,
+                'user_type' => 'admin',
+                'action' => 'logout',
+                'model_type' => 'Admin',
+                'model_id' => $admin->id,
+                'details' => [
+                    'name' => $admin->name,
+                    'email' => $admin->email,
+                ]
+            ]);
+        }
+
         Auth::guard('admin')->logout();
 
         $request->session()->invalidate();

@@ -110,8 +110,8 @@
                              <th class="px-3 pb-2 min-w-[110px]">Price/Pc (₹)</th>
                              <th class="px-3 pb-2 min-w-[90px]">Qty/Unit</th>
                              <th class="px-3 pb-2 min-w-[80px]">GST %</th>
-                             <th class="px-3 pb-2 min-w-[200px] text-center text-emerald-600 font-black">Dealer Disc %</th>
-                             <th class="px-3 pb-2 min-w-[200px] text-center text-indigo-600 font-black">Special Disc %</th>
+                             <th class="px-3 pb-2 min-w-[200px] text-center text-emerald-600 font-black">Special Disc %</th>
+                             <th class="px-3 pb-2 min-w-[200px] text-center text-indigo-600 font-black">Dealer Disc %</th>
                              <th class="px-3 pb-2 min-w-[130px] text-right">Total (Incl. GST)</th>
                              <th class="px-3 pb-2 w-12 text-center"></th>
                          </tr>

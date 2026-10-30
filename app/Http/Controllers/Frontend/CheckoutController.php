@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OrderPlacedMail;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -88,18 +89,12 @@ class CheckoutController extends Controller
             $productId = $item['product_id'] ?? $cartKey;
             $product = Product::with(['category', 'subcategory'])->find($productId);
 
-            $unitToPay = $item['price'];
-            $unitBase = $item['original_price'] ?? ($product ? $product->price : $item['price']);
-            
-            $lineBase = $unitBase * $item['quantity'];
-            $lineDisc = $unitToPay * $item['quantity'];
-            
-            $subtotal += $lineBase;
-            $totalDealerDiscount += max(0, $lineBase - $lineDisc);
-
             // Variation lookup
             $variation = null;
-            if ($product) {
+            if (!empty($item['variation_id'])) {
+                $variation = \App\Models\ProductVariation::find($item['variation_id']);
+            }
+            if (!$variation && $product) {
                 $variation = $product->variations()
                     ->where(function($q) use ($item) {
                         $val = $item['size'] ?? null;
@@ -118,6 +113,18 @@ class CheckoutController extends Controller
                     })
                     ->first();
             }
+
+            $unitToPay = $item['price'];
+            $fallbackBase = $variation 
+                ? ($customer->customer_type === 'dealer' ? $variation->getEffectiveBasePriceForDealer($customer) : $variation->base_price)
+                : ($product ? ($customer->customer_type === 'dealer' ? $product->getEffectiveBasePriceForDealer($customer) : $product->price) : $item['price']);
+            $unitBase = $item['original_price'] ?? $fallbackBase;
+            
+            $lineBase = $unitBase * $item['quantity'];
+            $lineDisc = $unitToPay * $item['quantity'];
+            
+            $subtotal += $lineBase;
+            $totalDealerDiscount += max(0, $lineBase - $lineDisc);
 
             // GST calculation
             $gstPct = $item['gst_percentage'] ?? ($variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0));
@@ -222,7 +229,10 @@ class CheckoutController extends Controller
             $discountAmount = 0;
 
             $variation = null;
-            if ($product) {
+            if (!empty($item['variation_id'])) {
+                $variation = \App\Models\ProductVariation::find($item['variation_id']);
+            }
+            if (!$variation && $product) {
                 $variation = $product->variations()
                     ->where(function($q) use ($item) {
                         $val = $item['size'] ?? null;
@@ -243,9 +253,12 @@ class CheckoutController extends Controller
             }
 
             if ($product) {
-                $gstInclusiveOriginal = $variation ? $variation->total_price : $product->price;
+                $effectiveBasePrice = $variation 
+                    ? ($customer->customer_type === 'dealer' ? $variation->getEffectiveBasePriceForDealer($customer) : $variation->base_price)
+                    : ($customer->customer_type === 'dealer' ? $product->getEffectiveBasePriceForDealer($customer) : $product->price);
+
                 $gstPct = $item['gst_percentage'] ?? ($variation ? $variation->gst_percentage : ($product->gst_percentage ?? 0));
-                $originalBasePrice = $gstInclusiveOriginal / (1 + ($gstPct / 100));
+                $originalBasePrice = $effectiveBasePrice;
 
                 $isPieces = isset($item['is_pieces']) && $item['is_pieces'];
                 $tempPerUnitPieces = $variation ? $variation->total_pieces : ($product->per_quantity_pieces ?? 1);
@@ -377,6 +390,26 @@ class CheckoutController extends Controller
                 'thickness' => $item['thickness'],
                 'color' => $item['color'],
             ]);
+        }
+
+        try {
+            ActivityLog::create([
+                'customer_id' => $customer->id,
+                'user_type' => $customer->customer_type === 'dealer' ? 'b2b' : 'b2c',
+                'action' => 'order_placed',
+                'model_type' => 'Order',
+                'model_id' => $order->id,
+                'details' => [
+                    'order_number' => $order->order_number,
+                    'name' => $customer->name,
+                    'company_name' => $customer->company_name,
+                    'total' => $order->total,
+                    'items_count' => count($items),
+                    'payment_method' => $order->payment_method,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Activity Log Order Error: " . $e->getMessage());
         }
 
         try {

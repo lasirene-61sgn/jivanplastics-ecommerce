@@ -362,6 +362,7 @@
                         </button>
                         <div class="dropdown-menu left-auto right-0">
                             <a href="{{ route('b2b.profile') }}" class="dropdown-item">Profile Settings</a>
+                            <a href="{{ route('b2b.reward-claims.index') }}" class="dropdown-item">My Claimed Rewards</a>
                             <div class="border-t border-slate-50 my-1"></div>
                             <a href="{{ route('logout') }}"
                                 onclick="event.preventDefault(); document.getElementById('logout-form').submit();"

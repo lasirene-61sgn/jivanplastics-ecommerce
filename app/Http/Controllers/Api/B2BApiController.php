@@ -67,6 +67,8 @@ class B2BApiController extends Controller
         // Create new token
         $token = $user->createToken('B2B Token')->plainTextToken;
 
+        $customer->recordLogin('B2B API', $request);
+
         return response()->json([
             'message' => 'Login successful',
             'user' => [
@@ -993,3 +995,4 @@ class B2BApiController extends Controller
         ]);
     }
 }
+
